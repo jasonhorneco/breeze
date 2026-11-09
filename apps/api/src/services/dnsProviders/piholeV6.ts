@@ -111,9 +111,9 @@ export class PiHoleV6Provider implements DnsProvider {
 
   async syncEvents(since: Date, until: Date): Promise<DnsEvent[]> {
     // Pi-hole's /api/queries is paginated newest-first. We bound the window
-    // server-side with from/until (unix seconds) and page back with the
-    // returned `cursor` until we run out, capping pages to keep one sync
-    // bounded on a busy resolver.
+    // server-side with from/until (unix seconds). `cursor` is a stable snapshot
+    // ceiling, not a next-page token; `start` advances within that snapshot.
+    // Cap the work and reject incomplete windows so lastSync cannot skip them.
     const fromSec = Math.floor(since.getTime() / 1000);
     const untilSec = Math.ceil(until.getTime() / 1000);
     const perPage = 1000;
@@ -124,17 +124,27 @@ export class PiHoleV6Provider implements DnsProvider {
     // a healthy "success" sync — is observable in the server logs.
     let skipped = 0;
     let cursor: number | undefined;
+    let offset = 0;
+    let previousPage: string | undefined;
 
     for (let page = 0; page < maxPages; page++) {
       const params = new URLSearchParams({
         from: String(fromSec),
         until: String(untilSec),
-        length: String(perPage)
+        length: String(perPage),
+        start: String(offset)
       });
       if (cursor !== undefined) params.set('cursor', String(cursor));
 
       const payload = await this.call<Record<string, unknown>>(`/api/queries?${params.toString()}`);
       const rows = asArray(payload.queries);
+      if (rows.length > 0) {
+        const first = asRecord(rows[0]);
+        const last = asRecord(rows[rows.length - 1]);
+        const signature = JSON.stringify([first?.id, first?.time, first?.domain, last?.id, last?.time, last?.domain]);
+        if (signature === previousPage) throw new Error('Pi-hole v6 query pagination did not advance; window is incomplete');
+        previousPage = signature;
+      }
 
       for (const entry of rows) {
         const record = asRecord(entry);
@@ -170,20 +180,12 @@ export class PiHoleV6Provider implements DnsProvider {
         });
       }
 
-      // Advance to the next (older) page. Stop when the server reports no
-      // further cursor, returns a short page, or repeats the cursor (a
-      // pagination quirk that would otherwise spin).
-      const nextCursor = asNumber(payload.cursor);
-      if (rows.length < perPage || nextCursor === undefined || nextCursor === cursor) break;
-      cursor = nextCursor;
+      if (cursor === undefined) cursor = asNumber(payload.cursor);
+      offset += rows.length;
+      const total = asNumber(payload.recordsFiltered);
+      if (rows.length < perPage || (total !== undefined && offset >= total)) break;
       if (page === maxPages - 1) {
-        // Hit the page budget with a further cursor still available: older
-        // in-window events were NOT fetched. The next run's `since` advances to
-        // this run's `until`, so they would be lost silently — surface it.
-        console.warn(
-          `[PiHoleV6] query sync reached the ${maxPages}-page cap with more results available; ` +
-          'some older in-window events were not fetched this run.'
-        );
+        throw new Error(`Pi-hole v6 query sync exceeded its ${maxPages}-page budget; window is incomplete`);
       }
     }
 
