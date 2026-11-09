@@ -158,7 +158,7 @@ describe('PiHoleV6Provider', () => {
     expect(events.map((e) => e.domain)).toEqual(['in.example']);
   });
 
-  it('pages back through the cursor until a short page is returned', async () => {
+  it('advances the offset while retaining the snapshot cursor', async () => {
     // All 1000 entries sit inside the [since, until] window so none are filtered;
     // the test is exercising cursor paging, not the window guard.
     const fullPage = Array.from({ length: 1000 }, (_, i) => ({
@@ -185,6 +185,38 @@ describe('PiHoleV6Provider', () => {
     // Second query request carried the cursor from the first page.
     const secondQuery = requestJsonMock.mock.calls[2]![0] as string;
     expect(secondQuery).toContain('cursor=999');
+    expect(secondQuery).toContain('start=1000');
+  });
+
+  it('collects every page when Pi-hole keeps its snapshot cursor unchanged', async () => {
+    const page = (start: number, count: number) => Array.from({ length: count }, (_, i) => ({
+      id: 3000 - start - i, time: 1_700_000_500, domain: `q${start + i}.example`,
+      type: 'A', status: 'GRAVITY', client: { ip: '10.0.0.1' }
+    }));
+    queueResponses([AUTH_OK,
+      { queries: page(0, 1000), cursor: 3000, recordsFiltered: 2001 },
+      { queries: page(1000, 1000), cursor: 3000, recordsFiltered: 2001 },
+      { queries: page(2000, 1), cursor: 3000, recordsFiltered: 2001 }
+    ]);
+    const events = await newProvider().syncEvents(new Date(1_700_000_000_000), new Date(1_700_001_000_000));
+    expect(events).toHaveLength(2001);
+    expect(new Set(events.map(e => e.providerEventId)).size).toBe(2001);
+    expect(events.at(-1)?.domain).toBe('q2000.example');
+    expect(new URL(requestJsonMock.mock.calls[3]![0] as string).searchParams.get('start')).toBe('2000');
+    expect(new URL(requestJsonMock.mock.calls[3]![0] as string).searchParams.get('cursor')).toBe('3000');
+  });
+
+  it('rejects an incomplete window when its bounded page budget is exhausted', async () => {
+    requestJsonMock.mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/auth') return AUTH_OK as never;
+      const start = Number(url.searchParams.get('start') ?? 0);
+      return { cursor: 60000, recordsFiltered: 50001, queries: Array.from({ length: 1000 }, (_, i) => ({
+        id: 60000 - start - i, time: 1_700_000_500, domain: `q${start+i}.example`, status: 'GRAVITY'
+      })) } as never;
+    });
+    await expect(newProvider().syncEvents(new Date(1_700_000_000_000), new Date(1_700_001_000_000)))
+      .rejects.toThrow(/page budget/);
   });
 
   it('re-authenticates once and retries on a 401', async () => {
@@ -314,7 +346,7 @@ describe('PiHoleV6Provider', () => {
     expect(events.map((e) => e.domain)).toEqual(['good.example']);
   });
 
-  it('stops paging when the server repeats the same cursor (no infinite loop)', async () => {
+  it('rejects a repeated page rather than silently accepting an incomplete window', async () => {
     const page = Array.from({ length: 1000 }, (_, i) => ({
       id: 2000 - i,
       time: 1_700_000_500,
@@ -330,10 +362,10 @@ describe('PiHoleV6Provider', () => {
       { queries: page, cursor: 555 }
     ]);
 
-    await newProvider().syncEvents(
+    await expect(newProvider().syncEvents(
       new Date(1_700_000_000 * 1000),
       new Date(1_700_001_000 * 1000)
-    );
+    )).rejects.toThrow(/did not advance/);
 
     // auth + 2 query pages, then it stops rather than re-requesting cursor=555.
     expect(requestJsonMock).toHaveBeenCalledTimes(3);
