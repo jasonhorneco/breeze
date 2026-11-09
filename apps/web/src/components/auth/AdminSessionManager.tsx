@@ -11,6 +11,7 @@ import { useOrgStore } from '../../stores/orgStore';
 import { getJwtClaims } from '../../lib/authScope';
 import { SESSION_TIMEOUT_MAX_MINUTES } from '../../lib/sessionTimeout';
 import IdleWarningDialog from './IdleWarningDialog';
+import { createSharedAdminActivity, type AdminActivityKind, type SharedAdminActivity } from '../../lib/sharedAdminActivity';
 
 const DEFAULT_IDLE_TIMEOUT_MINUTES = 60;
 const DEFAULT_REFRESH_INTERVAL_MINUTES = 5;
@@ -55,11 +56,14 @@ export default function AdminSessionManager() {
   // session-timeout effect (it resets the budget to the default).
   const hasAccessToken = useAuthStore((state) => Boolean(state.tokens?.accessToken));
   const currentOrgId = useOrgStore((state) => state.currentOrgId);
+  const activityActorId = useAuthStore((state) => state.user?.id ?? null);
   const [idleTimeoutMs, setIdleTimeoutMs] = useState(DEFAULT_IDLE_TIMEOUT_MS);
   // Last budget we actually READ from the server, for any scope. Used only as a
   // clamp when a later lookup fails — see settleTimeout.
   const lastKnownBudgetMsRef = useRef<number | null>(null);
   const lastActivityAtRef = useRef<number>(Date.now());
+  const activityActorRef = useRef<string | null>(null);
+  const sharedActivityRef = useRef<SharedAdminActivity | null>(null);
   const lastRefreshAtRef = useRef<number>(0);
   const refreshInFlightRef = useRef(false);
   const idleLogoutInFlightRef = useRef(false);
@@ -99,29 +103,68 @@ export default function AdminSessionManager() {
     }
   }, []);
 
+  const markLocalActivity = useCallback((kind: AdminActivityKind) => {
+    lastActivityAtRef.current = Date.now();
+    sharedActivityRef.current?.record(kind);
+  }, []);
+
+  const syncSharedActivity = useCallback(() => {
+    const activity = sharedActivityRef.current?.read();
+    if (!activity || idleLogoutInFlightRef.current) return;
+    const adopt = (at: number | null, kind: AdminActivityKind) => {
+      if (at === null || at <= lastActivityAtRef.current) return;
+      if (warningVisibleRef.current && kind === 'passive') return;
+      lastActivityAtRef.current = at;
+      if (warningVisibleRef.current) {
+        warningVisibleRef.current = false;
+        setWarningVisible(false);
+      }
+    };
+    // Keep deliberate input independent of later passive writes: a warning
+    // requires affirmation, even when another tab is the one receiving it.
+    adopt(activity.deliberateAt, 'deliberate');
+    adopt(activity.passiveAt, 'passive');
+  }, []);
+
   const runIdleLogout = useCallback(async () => {
+    syncSharedActivity();
+    if (Date.now() - lastActivityAtRef.current < idleTimeoutMs) return;
     if (idleLogoutInFlightRef.current) return;
     idleLogoutInFlightRef.current = true;
     setSigningOut(true);
     // Order matters: apiLogout revokes the refresh-token family server-side and
     // needs the Bearer/localStorage state that handleSessionExpired's logout()
     // clears.
+    sharedActivityRef.current?.clear();
     await apiLogout();
     handleSessionExpired('idle');
-  }, []);
+  }, [idleTimeoutMs, syncSharedActivity]);
 
   const dismissWarning = useCallback(() => {
     if (!warningVisibleRef.current || idleLogoutInFlightRef.current) return;
     warningVisibleRef.current = false;
     setWarningVisible(false);
-    lastActivityAtRef.current = Date.now();
+    markLocalActivity('deliberate');
     // Belt-and-braces freshness on an explicit continue. The token has NOT
     // necessarily gone stale — the 5-minute keepalive is visibility-gated, not
     // activity-gated, so a visible-but-idle tab has been refreshing it all
     // along; a backgrounded tab has not. Refresh unconditionally rather than
     // reason about which case we're in.
     void refreshAccessToken();
-  }, [refreshAccessToken]);
+  }, [refreshAccessToken, markLocalActivity]);
+
+  useEffect(() => {
+    const actor = isAuthenticated ? activityActorId : null;
+    if (activityActorRef.current === actor) return;
+    sharedActivityRef.current?.clear();
+    activityActorRef.current = actor;
+    sharedActivityRef.current = actor ? createSharedAdminActivity(actor) : null;
+    lastActivityAtRef.current = Date.now();
+    warningVisibleRef.current = false;
+    setWarningVisible(false);
+    setSigningOut(false);
+    idleLogoutInFlightRef.current = false;
+  }, [isAuthenticated, activityActorId]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -139,13 +182,9 @@ export default function AdminSessionManager() {
       return;
     }
 
-    const markActivity = () => {
-      lastActivityAtRef.current = Date.now();
-    };
-
     const handlePassiveActivity = () => {
       if (warningVisibleRef.current) return;
-      markActivity();
+      markLocalActivity('passive');
     };
 
     const handleDeliberateActivity = () => {
@@ -153,7 +192,7 @@ export default function AdminSessionManager() {
         dismissWarning();
         return;
       }
-      markActivity();
+      markLocalActivity('deliberate');
     };
 
     for (const eventName of PASSIVE_ACTIVITY_EVENTS) {
@@ -173,7 +212,7 @@ export default function AdminSessionManager() {
       }
       document.removeEventListener('visibilitychange', handlePassiveActivity);
     };
-  }, [isAuthenticated, dismissWarning]);
+  }, [isAuthenticated, dismissWarning, markLocalActivity]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -292,7 +331,7 @@ export default function AdminSessionManager() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, currentOrgId, hasAccessToken]);
+  }, [isAuthenticated, currentOrgId, hasAccessToken, activityActorId]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -302,6 +341,7 @@ export default function AdminSessionManager() {
     const runHeartbeat = async () => {
       if (cancelled || idleLogoutInFlightRef.current) return;
 
+      syncSharedActivity();
       const now = Date.now();
       const idleMs = now - lastActivityAtRef.current;
 
@@ -339,7 +379,7 @@ export default function AdminSessionManager() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, idleTimeoutMs, refreshAccessToken, runIdleLogout]);
+  }, [isAuthenticated, idleTimeoutMs, refreshAccessToken, runIdleLogout, syncSharedActivity]);
 
   // The 30s heartbeat raises the warning; this drives the visible countdown and
   // owns expiry, so the logout lands on the second the countdown shows 0:00
@@ -349,6 +389,7 @@ export default function AdminSessionManager() {
 
     const tick = () => {
       if (idleLogoutInFlightRef.current) return;
+      syncSharedActivity();
       const remainingMs = idleTimeoutMs - (Date.now() - lastActivityAtRef.current);
       setWarningRemainingMs(Math.max(0, remainingMs));
       if (remainingMs <= 0) {
@@ -358,7 +399,7 @@ export default function AdminSessionManager() {
 
     const timer = window.setInterval(tick, COUNTDOWN_TICK_MS);
     return () => window.clearInterval(timer);
-  }, [warningVisible, idleTimeoutMs, runIdleLogout]);
+  }, [warningVisible, idleTimeoutMs, runIdleLogout, syncSharedActivity]);
 
   if (!warningVisible) return null;
 
