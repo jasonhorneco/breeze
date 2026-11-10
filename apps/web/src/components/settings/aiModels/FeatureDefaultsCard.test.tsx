@@ -11,12 +11,12 @@ vi.mock('../../shared/Toast', () => ({ showToast: (...a: unknown[]) => showToast
 vi.mock('@/lib/navigation', () => ({ navigateTo: vi.fn() }));
 
 import FeatureDefaultsCard from './FeatureDefaultsCard';
+import FormCard from '../partnerSettings/FormCard';
 import { usePartnerSettingsDraftStore } from '../partnerSettings/partnerSettingsDraftStore';
 import { useAiFeatureDefaultsUnit } from '../partnerSettings/units/aiFeatureDefaultsUnit';
 import { runSaveUnits } from '../partnerSettings/saveUnits';
 
-// W2: the card has no Save of its own; the partner settings header Save runs
-// the aiFeatureDefaults unit (skipping it while it is invalid).
+// Both the page header and the card submit through the same settings save unit.
 const headerSave = async () => {
   const unit = renderHook(() => useAiFeatureDefaultsUnit()).result.current;
   await act(async () => { await runSaveUnits([unit]); });
@@ -64,6 +64,16 @@ beforeEach(() => { fetchWithAuth.mockReset(); showToast.mockReset(); usePartnerS
 const optionValues = (testId: string) => [...(screen.getByTestId(testId) as HTMLSelectElement).options].map((o) => o.value);
 
 describe('FeatureDefaultsCard', () => {
+  it('offers the shared Save next to Discard when a feature draft changes', () => {
+    const submit = vi.fn();
+    render(<FormCard onSubmit={submit}><FeatureDefaultsCard snapshot={snapWithDefaults()} onSaved={vi.fn()} /></FormCard>);
+    expect(screen.queryByTestId('ai-defaults-save')).toBeNull();
+    fireEvent.change(screen.getByTestId('ai-defaults-default-chat'), { target: { value: B } });
+    fireEvent.click(screen.getByTestId('ai-defaults-save'));
+    expect(submit).toHaveBeenCalledOnce();
+    expect(fetchWithAuth).not.toHaveBeenCalled();
+  });
+
   it('PUTs only dirty rows with expectedUpdatedAt', async () => {
     fetchWithAuth.mockResolvedValueOnce(jsonRes({ assignments: [{ surface: 'chat', role: 'default', updatedAt: 'x' }] }));
     render(<FeatureDefaultsCard snapshot={snapWithDefaults()} onSaved={vi.fn()} />);
@@ -127,11 +137,11 @@ describe('FeatureDefaultsCard', () => {
     expect(fetchWithAuth).not.toHaveBeenCalled();
   });
 
-  it('feature defaults partner mode has no Save button', () => {
+  it('changing a feature choice keeps the edit in the draft until save', () => {
     render(<FeatureDefaultsCard snapshot={snapWithDefaults()} onSaved={vi.fn()} />);
     fireEvent.click(screen.getByTestId('ai-defaults-user-choice-chat'));
     expect(screen.getByTestId('ai-defaults-dirty')).toBeTruthy();
-    expect(screen.queryByTestId('ai-defaults-save')).toBeNull();
+    expect(fetchWithAuth).not.toHaveBeenCalled();
   });
 
   it('the draft survives the card unmounting (a tab switch)', () => {

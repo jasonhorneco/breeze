@@ -3,7 +3,7 @@ import { usePartnerSettingsSaveApi } from './partnerSettingsSaveContext';
 
 /**
  * A form-kind card of the partner settings page (spec §3.6). Submitting it
- * (Enter in a field) runs the header Save, the page's only Save. Forms never
+ * (Enter in a field or a visible submit button) runs the page's shared Save. Forms never
  * nest: list rows and drawers keep their own forms and are never wrapped.
  * Every `<button>` inside must carry an explicit `type`, or it would submit.
  */
