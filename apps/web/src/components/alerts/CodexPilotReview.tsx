@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { AiReviewProviderDto } from '@breeze/shared';
 import { fetchWithAuth } from '../../stores/auth';
 import { runAction } from '../../lib/runAction';
+import { AlertReviewModelPicker } from '../ai/AiModelPicker';
 
 type Proposal = { kind: 'policy' | 'script'; title: string; draft: string; risk: string };
 type Review = {
@@ -16,6 +18,7 @@ type PilotState = {
   review: Review | null;
   attempt: { state: 'started' | 'completed' | 'failed'; code?: string } | null;
   approval?: { id: string; status: string };
+  reviewProvider?: AiReviewProviderDto;
 };
 
 function failureMessage(code: string | undefined) {
@@ -34,6 +37,7 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
   const [pilot, setPilot] = useState<PilotState | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>();
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -57,6 +61,8 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
 
   const review = pilot?.review;
   const attempt = pilot?.attempt;
+  const catalog = pilot?.reviewProvider;
+  const model = selectedModel ?? catalog?.model.slug;
 
   async function submit(publish = false) {
     setBusy(true);
@@ -64,6 +70,7 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
       const data = await runAction<PilotState>({
         request: () => fetchWithAuth(path + (publish ? '/publish' : ''), {
           method: 'POST',
+          ...(!publish && model ? { body: JSON.stringify({ model }) } : {}),
         }),
         errorFallback: 'The Codex pilot request failed.',
       });
@@ -86,9 +93,12 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
       {!review && attempt?.state === 'started' && <p role="status">Codex is reviewing the stored alert. Refresh to see the result.</p>}
       {!review && attempt?.state === 'failed' && <p role="status">{failureMessage(attempt.code)}</p>}
       {pilot && !review && !attempt && (
-        <button className="rounded-md border px-3 py-2" type="button" disabled={busy} onClick={() => void submit()}>
-          Review this alert
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {catalog && <AlertReviewModelPicker catalog={catalog} value={model ?? catalog.model.slug} onChange={setSelectedModel} disabled={busy} />}
+          <button className="rounded-md border px-3 py-2" type="button" disabled={busy} onClick={() => void submit()}>
+            Review this alert
+          </button>
+        </div>
       )}
       {(unavailable || attempt?.state === 'started') && (
         <button className="rounded-md border px-3 py-2" type="button" disabled={busy} onClick={() => void refresh()}>
@@ -100,7 +110,8 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
           <p>{review.finding}</p>
           <p><strong>What remains uncertain</strong> {review.unknown}</p>
           <p className="text-muted-foreground">
-            {review.model} ({review.effort}) · Evidence {review.citations.join(', ')}
+            {catalog?.model.slug === review.model ? `${catalog.provider} · ${catalog.model.displayName}` : review.model}
+            {' '}({review.effort}) · Evidence {review.citations.join(', ')}
           </p>
           {review.proposal && (
             <div className="space-y-2 rounded-md border p-3">

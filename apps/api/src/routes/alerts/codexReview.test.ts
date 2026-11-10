@@ -19,7 +19,7 @@ vi.mock('../../services/approvals/codexDraft', async (importOriginal) => ({
 }));
 vi.mock('../../middleware/auth', () => ({
   requireScope: () => async (c: Context, next: Next) => {
-    c.set('auth', { user: { id: mock.user }, principal: { kind: mock.principal } });
+    c.set('auth', { user: { id: mock.user }, principal: { kind: mock.principal }, canAccessOrg: (orgId: string) => orgId === mock.org });
     await next();
   },
   requirePermission: () => async (_c: Context, next: Next) => { await next(); },
@@ -86,5 +86,20 @@ describe('owner-only Codex pilot', () => {
     expect(await response.json()).toMatchObject({ approval: { id, status: 'pending' } });
     expect(mock.publish).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id }), review);
     expect((await app.request(path + '/decision', { method: 'POST' })).status).toBe(404);
+  });
+
+  it('projects the verified plan model and rejects a different model before queueing', async () => {
+    vi.stubEnv('BREEZE_CODEX_PILOT_CATALOG_VERIFIED_AT', '2026-11-09T06:00:00Z');
+    vi.stubEnv('BREEZE_CODEX_PILOT_CATALOG_DISPLAY_NAME', 'GPT-6-Luna');
+    const response = await app.request(path);
+    expect(await response.json()).toMatchObject({
+      reviewProvider: { provider: 'OpenAI Codex', funding: 'ChatGPT subscription', model: { slug: 'gpt-6-luna' }, alertId: id },
+    });
+    mock.upstream.mockClear();
+    const responseWrong = await app.request(path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gpt-6-astra' }),
+    });
+    expect(responseWrong.status).toBe(422);
+    expect(mock.upstream).not.toHaveBeenCalled();
   });
 });

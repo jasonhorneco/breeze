@@ -7,6 +7,7 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth';
 import { buildPartnerModelsSnapshot } from '../../services/aiModels/registryView';
+import { codexReviewCatalog } from '../../services/aiModels/codexReviewCatalog';
 import { aiModelAssignmentRoutes } from './assignments';
 import { aiModelChoiceRoutes } from './choices';
 import { aiModelConnectionRoutes } from './connections';
@@ -21,7 +22,9 @@ aiModelsRoutes.use('*', authMiddleware);
 
 aiModelsRoutes.get('/', ...partnerRead, async (c) => {
   const { partnerId } = requirePartnerWide(c);
-  return c.json(await buildPartnerModelsSnapshot(partnerId));
+  const snapshot = await buildPartnerModelsSnapshot(partnerId);
+  const reviewProvider = codexReviewCatalog(c.get('auth'));
+  return c.json(reviewProvider ? { ...snapshot, reviewProvider } : snapshot);
 });
 
 aiModelsRoutes.route('/connections', aiModelConnectionRoutes);

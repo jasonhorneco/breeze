@@ -29,6 +29,7 @@ import { requirePermission, requireScope, withAuthDbAccessContext, type AuthCont
 import { getSession } from '../../services/aiAgent';
 import { readOrgPartnerId } from '../../services/aiModels/candidateLoader';
 import { listModelChoices } from '../../services/aiModels/modelChoices';
+import { codexReviewCatalog } from '../../services/aiModels/codexReviewCatalog';
 import { LlmUnavailableError } from '../../services/llm/llmUnavailableError';
 
 export const aiModelChoiceRoutes = new Hono();
@@ -43,9 +44,11 @@ async function partnerFor(auth: AuthContext, orgId: string): Promise<string | nu
   return partnerId;
 }
 
-async function respond(c: Context, load: () => Promise<AiModelChoicesDto>): Promise<Response> {
+async function respond(c: Context, load: () => Promise<AiModelChoicesDto>, orgId?: string): Promise<Response> {
   try {
-    return c.json({ data: await load() });
+    const data = await load();
+    const reviewProvider = codexReviewCatalog(c.get('auth'), orgId);
+    return c.json({ data: reviewProvider ? { ...data, reviewProvider } : data });
   } catch (err) {
     if (err instanceof LlmUnavailableError) return c.json({ error: err.message, code: 'registry_unavailable' }, 503);
     throw err;
@@ -79,7 +82,7 @@ aiModelChoiceRoutes.get(
     }
     const partnerId = await partnerFor(auth, orgId);
     if (!partnerId) return c.json(NOT_FOUND, 404);
-    return respond(c, () => listModelChoices({ partnerId, orgId, userId: auth.user.id, surface: 'chat', current }));
+    return respond(c, () => listModelChoices({ partnerId, orgId, userId: auth.user.id, surface: 'chat', current }), orgId);
   },
 );
 
@@ -104,6 +107,6 @@ aiModelChoiceRoutes.get(
     if (!auth.canAccessOrg(orgId)) return c.json(NOT_FOUND, 404);
     const partnerId = await partnerFor(auth, orgId);
     if (!partnerId) return c.json(NOT_FOUND, 404);
-    return respond(c, () => listModelChoices({ partnerId, orgId, userId: auth.user.id, surface: 'ai_agents' }));
+    return respond(c, () => listModelChoices({ partnerId, orgId, userId: auth.user.id, surface: 'ai_agents' }), orgId);
   },
 );

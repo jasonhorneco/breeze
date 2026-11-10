@@ -218,6 +218,11 @@ export default function FeatureDefaultsCard({
                       <option value={draft.defaultOfferingId}>{unavailableModelLabel(t, nameOf(draft.defaultOfferingId))}</option>
                     )}
                     {choices.map((o) => <option key={o.id as string} value={o.id as string}>{o.displayName}</option>)}
+                    {snapshot.reviewProvider && (
+                      <option value="codex-review-only" disabled>
+                        {snapshot.reviewProvider.provider} · {snapshot.reviewProvider.model.displayName} · Alert review only
+                      </option>
+                    )}
                   </select>
                 </label>
 

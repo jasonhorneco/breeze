@@ -134,7 +134,17 @@ export default function ModelsCard({
         <p className="text-xs text-muted-foreground">{t('aiModels.models.subtitle')}</p>
       </div>
 
-      {groups.length === 0 && <p className="text-sm text-muted-foreground">{t('aiModels.models.empty')}</p>}
+      {groups.length === 0 && !snapshot.reviewProvider && <p className="text-sm text-muted-foreground">{t('aiModels.models.empty')}</p>}
+
+      {snapshot.reviewProvider && (
+        <div className="space-y-1" data-testid="ai-models-group-codex-review">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{snapshot.reviewProvider.provider}</h4>
+          <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
+            <span className="font-medium">{snapshot.reviewProvider.model.displayName} (Low)</span>
+            <span className="text-xs text-muted-foreground">{snapshot.reviewProvider.funding} · Alert review only</span>
+          </div>
+        </div>
+      )}
 
       {groups.map((g) => (
         <div key={g.key} data-testid={`ai-models-group-${g.key}`} className="space-y-1">

@@ -112,6 +112,15 @@ export default function ConnectionsCard({
                     <span className="block font-medium">{t(/* i18n-dynamic */ ADD_KIND_LABEL_KEYS[k])}</span>
                   </button>
                 ))}
+                {snapshot.reviewProvider && (
+                  <button type="button" onClick={() => {
+                    setChooserOpen(false);
+                    document.getElementById('codex-review-connection')?.scrollIntoView({ block: 'nearest' });
+                  }} className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted">
+                    {snapshot.reviewProvider.provider}
+                    <span className="block text-xs text-muted-foreground">Configured for alert review</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -194,6 +203,21 @@ export default function ConnectionsCard({
                 </td>
               </tr>
             ))}
+            {snapshot.reviewProvider && (
+              <tr id="codex-review-connection" data-testid="ai-connection-row-codex-review" className="border-t align-top">
+                <td className="py-2 pr-3">
+                  <div className="font-medium">{snapshot.reviewProvider.provider}</div>
+                  <div className="text-xs text-muted-foreground">Sign in with ChatGPT</div>
+                </td>
+                <td className="py-2 pr-3">Verified {relativeTime(snapshot.reviewProvider.verifiedAt)}</td>
+                <td className="py-2 pr-3">Sign-in</td>
+                <td className="py-2 pr-3">—</td>
+                <td className="py-2 pr-3">{snapshot.reviewProvider.funding}</td>
+                <td className="py-2">
+                  <a className="underline" href={`/alerts/${snapshot.reviewProvider.alertId}`}>Alert review</a>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -112,7 +112,17 @@ export interface AiSurfaceDefaultsDto {
   orgOverrideCount: number;
 }
 
+/** Managed subscription connection for owner-initiated alert review. */
+export interface AiReviewProviderDto {
+  provider: 'OpenAI Codex';
+  funding: 'ChatGPT subscription';
+  model: { slug: 'gpt-6-luna'; displayName: string; effort: 'low' };
+  verifiedAt: string;
+  alertId: string;
+}
+
 export interface AiModelsSnapshotDto {
+  reviewProvider?: AiReviewProviderDto;
   partner: { residencyRequired: boolean; plan: string; hosted: boolean };
   connections: AiConnectionDto[];
   offerings: AiOfferingDto[];

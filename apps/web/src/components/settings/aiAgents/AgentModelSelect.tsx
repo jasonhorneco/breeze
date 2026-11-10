@@ -83,6 +83,11 @@ export default function AgentModelSelect({ orgId, value, onChange, disabled }: {
             {label(c)}
           </option>
         ))}
+        {data.reviewProvider && (
+          <option value="codex-review-only" disabled>
+            {data.reviewProvider.provider} · {data.reviewProvider.model.displayName} · Alert review only
+          </option>
+        )}
         {value && !known.has(value) && (
           <option value={value} disabled data-testid={`ai-agent-model-option-${value}`}>
             {t('aiAgentsPage.fields.modelUnavailable')}

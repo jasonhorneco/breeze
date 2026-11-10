@@ -68,6 +68,24 @@ describe('AiModelPicker (spec §11)', () => {
     const { container } = render(<AiModelPicker />);
     expect(container).toBeEmptyDOMElement();
   });
+  it('shows the real review catalog even when chat choice is locked, without selecting it', () => {
+    setChoices({
+      ...base, allowUserChoice: false, choices: [],
+      reviewProvider: {
+        provider: 'OpenAI Codex', funding: 'ChatGPT subscription',
+        model: { slug: 'gpt-6-luna', displayName: 'GPT-6-Luna', effort: 'low' },
+        verifiedAt: '2026-11-09T06:00:00Z', alertId: 'example-alert',
+      },
+    });
+    render(<AiModelPicker />);
+    fireEvent.click(screen.getByTestId('ai-model-picker-button'));
+    const review = screen.getByTestId('ai-model-option-codex-review');
+    expect(review).toHaveAttribute('aria-disabled', 'true');
+    expect(review).toHaveTextContent('OpenAI Codex · GPT-6-Luna');
+    expect(screen.getByRole('link', { name: 'Open Codex alert review' })).toHaveAttribute('href', '/alerts/example-alert');
+    fireEvent.click(review);
+    expect(useAiModelPickerStore.getState().selection).toBeNull();
+  });
   it('is disabled while a reply streams (switch only between turns)', () => {
     setChoices(base);
     render(<AiModelPicker disabled />);

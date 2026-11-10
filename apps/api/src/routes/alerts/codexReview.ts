@@ -6,6 +6,7 @@ import { db } from '../../db';
 import { alertRules } from '../../db/schema';
 import { requireMfa, requirePermission, requireScope, type AuthContext } from '../../middleware/auth';
 import { isCodexPilotOwner, publishCodexDraft, readCodexDraftApproval } from '../../services/approvals/codexDraft';
+import { codexReviewCatalog } from '../../services/aiModels/codexReviewCatalog';
 import { PERMISSIONS, type UserPermissions } from '../../services/permissions';
 import { getAlertWithOrgCheck } from './helpers';
 
@@ -57,9 +58,11 @@ async function proxy(c: Context, id: string, body?: object) {
     const result = await requestPilot(id, body);
     const data = await result.json();
     if (result.status === 200 || result.status === 202) {
+      const auth = c.get('auth') as AuthContext;
+      const reviewProvider = codexReviewCatalog(auth);
+      if (reviewProvider) data.reviewProvider = reviewProvider;
       const reviewId = requestId.safeParse(data?.review?.requestId);
       if (reviewId.success && data.review.proposal) {
-        const auth = c.get('auth') as AuthContext;
         const approval = await readCodexDraftApproval(auth.user.id, reviewId.data);
         const binding = approval?.actionArguments as { alertId?: string; digest?: string } | undefined;
         if (approval && binding?.alertId === id && binding.digest === data.review.proposalDigest) {
@@ -83,6 +86,10 @@ codexReviewRoutes.get('/:id/codex-review', scopes, ownerOnly, read, async (c) =>
 codexReviewRoutes.post('/:id/codex-review', scopes, ownerOnly, read, write, requireMfa(), async (c) => {
   const alert = await allowedAlert(c);
   if (!alert || !alert.ruleId || !alert.resolvedAt || alert.status !== 'resolved') return c.notFound();
+  const body = await c.req.json().catch(() => null);
+  if (body?.model !== undefined && body.model !== codexReviewCatalog(c.get('auth'), alert.orgId)?.model.slug) {
+    return c.json({ error: 'pilot_model_unavailable' }, 422);
+  }
   const [rule] = await db.select({ name: alertRules.name }).from(alertRules).where(eq(alertRules.id, alert.ruleId)).limit(1);
   const ruleName = process.env.BREEZE_CODEX_PILOT_RULE_NAME;
   if (!ruleName) return c.notFound();
@@ -104,9 +111,11 @@ codexReviewRoutes.post('/:id/codex-review/publish', scopes, ownerOnly, read, wri
       const response = await requestPilot(alert.id);
       if (!response.ok) return c.json({ error: 'pilot_unavailable' }, 502);
       const data = await response.json();
-      const approval = await publishCodexDraft(c.get('auth') as AuthContext, alert, data.review);
+      const auth = c.get('auth') as AuthContext;
+      const approval = await publishCodexDraft(auth, alert, data.review);
       if (!approval) return c.json({ error: 'pilot_draft_invalid' }, 409);
-      return c.json({ review: data.review, attempt: data.attempt, approval: { id: approval.id, status: approval.status } });
+      return c.json({ review: data.review, attempt: data.attempt, approval: { id: approval.id, status: approval.status },
+        reviewProvider: codexReviewCatalog(auth, alert.orgId) });
     } catch {
       return c.json({ error: 'pilot_unavailable' }, 502);
     }

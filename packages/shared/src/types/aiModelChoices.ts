@@ -3,6 +3,7 @@
  * the API and the web. The settings-UI DTOs stay in ./aiModelRegistry.ts (W04).
  */
 import type { EffortLevel, ModelSpeed, OfferingOptions } from '../validators/aiModelOptions';
+import type { AiReviewProviderDto } from './aiModelRegistry';
 
 export type AiContinuationReason = 'cross_connection' | 'connection_changed' | 'transcript_too_large' | 'fit_unverifiable';
 
@@ -44,6 +45,8 @@ export interface AiModelChoiceDto {
 }
 
 export interface AiModelChoicesDto {
+  /** Discoverable here; selection is only supported on the review alert. */
+  reviewProvider?: AiReviewProviderDto;
   surface: 'chat' | 'ai_agents';
   /** Chat: false hides the whole menu and the option controls (spec §11). */
   allowUserChoice: boolean;

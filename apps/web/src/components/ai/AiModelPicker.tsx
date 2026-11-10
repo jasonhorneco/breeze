@@ -1,12 +1,29 @@
 import { useState } from 'react';
 import { ChevronDown, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { EFFORT_LEVELS, type EffortLevel } from '@breeze/shared';
+import { EFFORT_LEVELS, type AiReviewProviderDto, type EffortLevel } from '@breeze/shared';
 import { useAiModelPickerStore } from '@/stores/aiModelPickerStore';
 import { useAiStore } from '@/stores/aiStore';
 import { formatCentsPerM, formatContextTokens } from './modelPickerFormat';
 
 const NO_ALTERNATIVES: string[] = [];
+
+export function AlertReviewModelPicker({ catalog, value, onChange, disabled }: {
+  catalog: AiReviewProviderDto;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2">
+      <span>Model</span>
+      <select aria-label="Alert review model" className="rounded border bg-background px-2 py-1"
+        value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
+        <option value={catalog.model.slug}>{catalog.provider} · {catalog.model.displayName} (Low)</option>
+      </select>
+    </label>
+  );
+}
 
 /** Spec §11 "Chat composer": model menu + the options the chosen model supports. */
 export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
@@ -14,10 +31,13 @@ export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const { choices, select, setOption, effective } = useAiModelPickerStore();
   const refusalAlternatives = useAiStore((s) => s.refusalAlternatives ?? NO_ALTERNATIVES);
-  if (!choices || !choices.allowUserChoice || choices.choices.length === 0) return null;
+  if (!choices) return null;
+  const standardChoices = choices.allowUserChoice ? choices.choices : [];
+  const review = choices.reviewProvider;
+  if (standardChoices.length === 0 && !review) return null;
 
   const { offeringId, options } = effective();
-  const chosen = choices.choices.find((c) => c.offeringId === offeringId) ?? null;
+  const chosen = standardChoices.find((c) => c.offeringId === offeringId) ?? null;
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-t px-3 pt-2 text-xs" data-testid="ai-model-picker">
@@ -31,12 +51,12 @@ export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
           data-testid="ai-model-picker-button"
           className="flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted disabled:opacity-50"
         >
-          {chosen?.displayName ?? t('aiModelPicker.chooseModel')}
+          {chosen?.displayName ?? (standardChoices.length === 0 && review ? review.provider : t('aiModelPicker.chooseModel'))}
           <ChevronDown className="h-3 w-3" />
         </button>
         {open && (
           <ul role="listbox" className="absolute bottom-full left-0 z-20 mb-1 w-80 rounded-md border bg-popover p-1 shadow-md">
-            {choices.choices.map((c) => {
+            {standardChoices.map((c) => {
               const context = formatContextTokens(c.contextTokens);
               const price = t('aiModelPicker.price', {
                 input: formatCentsPerM(c.priceHint.inputCentsPerM),
@@ -76,9 +96,17 @@ export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
                 </li>
               );
             })}
+            {review && (
+              <li role="option" aria-disabled="true" aria-selected="false" data-testid="ai-model-option-codex-review"
+                className="flex flex-col rounded px-2 py-1.5 text-muted-foreground">
+                <span>{review.provider} · {review.model.displayName}</span>
+                <span>ChatGPT subscription · Alert review only</span>
+              </li>
+            )}
           </ul>
         )}
       </div>
+      {open && review && <a className="underline" href={`/alerts/${review.alertId}`}>Open Codex alert review</a>}
 
       {chosen && chosen.options.effort.length > 0 && (
         <label className="flex items-center gap-1">
