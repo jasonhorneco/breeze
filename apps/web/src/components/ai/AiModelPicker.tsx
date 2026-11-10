@@ -57,10 +57,10 @@ export function ModelPickerControl({ choices, select, setOption, value, disabled
     ? standardChoices.filter(choice => choice.provider?.id === chosen.provider?.id) : standardChoices;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t px-3 pt-2 text-xs" data-testid="ai-model-picker">
+    <div className="relative flex flex-wrap items-center gap-2 border-t px-3 pt-2 text-xs" data-testid="ai-model-picker">
       <ModelProviderSelect choices={providerChoices} selected={offeringId ?? ''} onSelect={select}
         testId="ai-model-provider" disabled={disabled} />
-      <div className="relative">
+      <div>
         <button
           type="button"
           disabled={disabled}
@@ -74,7 +74,7 @@ export function ModelPickerControl({ choices, select, setOption, value, disabled
           <ChevronDown className="h-3 w-3" />
         </button>
         {open && (
-          <ul role="listbox" className="absolute bottom-full left-0 z-20 mb-1 w-80 rounded-md border bg-popover p-1 shadow-md">
+          <ul role="listbox" className="absolute bottom-full left-3 right-3 z-20 mb-1 max-h-72 max-w-80 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
             {visibleModels.map((c) => {
               const context = formatContextTokens(c.contextTokens);
               const price = c.funding === 'chatgpt_plan' ? 'OpenAI Codex · ChatGPT subscription' : t('aiModelPicker.price', {

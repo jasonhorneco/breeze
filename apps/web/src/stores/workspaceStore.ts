@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AiAttachState, AiPageContext, AiStreamEvent, AiApprovalMode, AiTicketDraft, CreateTicketFromChatInput } from '@breeze/shared';
+import type { AiAttachState, AiPageContext, AiStreamEvent, AiApprovalMode, AiModelChoice, AiTicketDraft, CreateTicketFromChatInput } from '@breeze/shared';
 import { fetchWithAuth } from './auth';
 import { openAiSession, type AiSessionView } from './aiSessionOpen';
 import { attachAiSession, attachBackoffMs, shouldReattach, trackAttach, type AttachOutcome } from './aiSessionAttach';
@@ -62,6 +62,7 @@ export interface TabState {
   m365ConnectionId: string | null;
   /** The composer text, held here so a move carries it (not persisted). */
   composerDraft: string;
+  modelChoice?: AiModelChoice;
   /** Attached to a running turn whose replay was too large; cleared when the turn ends or the attach stops. */
   joinedMidResponse: boolean;
   /** A refusal the workspace cannot resolve itself: the banner offers the side panel. */
@@ -210,7 +211,8 @@ interface WorkspaceState {
   renameTab: (tabId: string, title: string) => Promise<void>;
 
   // Chat actions (tab-scoped)
-  sendMessage: (tabId: string, content: string) => Promise<void>;
+  setModelChoice: (tabId: string, modelChoice?: AiModelChoice) => void;
+  sendMessage: (tabId: string, content: string, choice?: { model: AiModelChoice; orgId?: string | null }) => Promise<void>;
   approveExecution: (tabId: string, executionId: string, approved: boolean) => Promise<void>;
   /**
    * An inline intent decide (Touch ID self-approve) already POSTed to the
@@ -715,7 +717,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
         },
 
-        sendMessage: async (tabId: string, content: string) => {
+        setModelChoice: (tabId, modelChoice) => updateTab(tabId, { modelChoice }),
+
+        sendMessage: async (tabId, content, choice) => {
           const trimmed = content.trim();
           if (!trimmed) return;
 
@@ -731,6 +735,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           // Create session lazily if needed
           let sessionId = tab.sessionId;
+          const createdNow = !sessionId;
           if (!sessionId) {
             updateTab(tabId, { isLoading: true, error: null });
             // #10142: the session is created under the tab's Wisp grant, so a
@@ -762,6 +767,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   ...(wisp
                     ? { orgId: wisp.orgId ?? undefined, wispGrantId: wisp.grantId, approvalMode: tab.approvalMode }
                     : {}),
+                  ...(choice ? { model: choice.model, ...(!wisp && choice.orgId ? { orgId: choice.orgId } : {}) } : {}),
                   pageContext: tab.pageContext ?? undefined,
                   // Carry a user-set title through to the new session so the
                   // server's first-message auto-title (gated on `!title`)
@@ -833,7 +839,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             const currentTab = getTab(tabId);
             const res = await fetchWithAuth(`/ai/sessions/${sessionId}/messages`, {
               method: 'POST',
-              body: JSON.stringify({ content: trimmed, pageContext: currentTab?.pageContext ?? undefined }),
+              body: JSON.stringify({
+                content: trimmed, pageContext: currentTab?.pageContext ?? undefined,
+                ...(choice && !createdNow ? { model: choice.model } : {}),
+              }),
             });
             if (stale()) return;
 
@@ -864,9 +873,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 return;
               }
               if (refusal === 'continuation' || refusal === 'choose_model') {
-                // The workspace has no model picker or continuation prompt:
-                // the banner offers the side panel, which has both.
-                dropBubble({ isStreaming: false, error: CHOOSE_MODEL_IN_PANEL, errorAction: 'continue_in_panel' });
+                // Cross-model continuation uses the existing side-panel flow.
+                // An unavailable selection stays editable here.
+                const needsPanel = refusal === 'continuation' || !choice;
+                dropBubble({ isStreaming: false, composerDraft: trimmed,
+                  error: needsPanel ? CHOOSE_MODEL_IN_PANEL : extractApiError(data, 'Choose another model'),
+                  errorAction: needsPanel ? 'continue_in_panel' : null });
                 return;
               }
               // Any other refusal (e.g. 503 ai_not_configured) came before the
@@ -880,6 +892,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               return;
             }
 
+            if (choice && getTab(tabId)?.modelChoice === choice.model) updateTab(tabId, { modelChoice: undefined });
             reader = res.body?.getReader();
             if (!reader) throw new Error('No response body');
 

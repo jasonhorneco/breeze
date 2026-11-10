@@ -347,6 +347,28 @@ describe('workspace store sendMessage title handling', () => {
   });
 });
 
+describe('workspace model selection', () => {
+  it.each([false, true])('carries a model choice with the right request (existing: %s)', async (existing) => {
+    vi.clearAllMocks();
+    const model = { offeringId: 'plan-sol', options: { effort: 'high' as const } };
+    useWorkspaceStore.setState({
+      tabs: [tab({ sessionId: existing ? 'session-1' : null, modelChoice: model })],
+      activeTabId: 'tab-1',
+      _readers: new Map(),
+    });
+    if (!existing) fetchWithAuthMock.mockResolvedValueOnce(makeResponse({ id: 'session-1' }));
+    fetchWithAuthMock.mockResolvedValueOnce(new Response("", { status: 200 }));
+
+    await useWorkspaceStore.getState().sendMessage('tab-1', 'hello', { model, orgId: 'home' });
+
+    const requests = fetchWithAuthMock.mock.calls.map(([path, init]) => [path, JSON.parse(String(init?.body))]);
+    expect(requests).toEqual(existing
+      ? [['/ai/sessions/session-1/messages', { content: 'hello', model }]]
+      : [['/ai/sessions', { model, orgId: 'home' }], ['/ai/sessions/session-1/messages', { content: 'hello' }]]);
+    expect(useWorkspaceStore.getState().tabs[0]?.modelChoice).toBeUndefined();
+  });
+});
+
 describe('workspace store sendMessage refused before the turn ran (#10108)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

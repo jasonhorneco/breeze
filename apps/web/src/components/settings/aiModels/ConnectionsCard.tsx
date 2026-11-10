@@ -16,7 +16,7 @@ function kindLabel(connection: AiConnectionDto, t: TFunction<'settings'>): strin
     case 'anthropic_byok': return t('aiModels.connections.kind.anthropic_byok');
     case 'catalog': return t('aiModels.connections.kind.catalog');
     case 'openai_compatible': return t('aiModels.connections.kind.openai_compatible');
-    case 'chatgpt_plan': return 'OpenAI Codex';
+    case 'chatgpt_plan': return 'Sign in with ChatGPT';
     default: {
       const unreachable: never = kind;
       return String(unreachable);

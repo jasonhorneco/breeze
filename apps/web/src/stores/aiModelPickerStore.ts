@@ -45,6 +45,18 @@ export function noSessionOrgId(pageContext: AiPageContext | null | undefined, se
   return selectedOrgId ?? null;
 }
 
+export function requestChatModelChoices({ sessionId, orgId, signal }: {
+  sessionId?: string | null;
+  orgId?: string | null;
+  signal?: AbortSignal;
+}): Promise<Response> {
+  // The API accepts a session or an organization, never both (#7768).
+  const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : orgId ? `?orgId=${encodeURIComponent(orgId)}` : '';
+  const init = { ...(sessionId ? { skipOrgIdInjection: true } : {}), ...(signal ? { signal } : {}) };
+  const path = `/ai/models/choices/chat${query}`;
+  return sessionId || signal ? fetchWithAuth(path, init) : fetchWithAuth(path);
+}
+
 const keyOf = (k: { sessionId?: string | null; orgId?: string | null }): string =>
   k.sessionId ? `s:${k.sessionId}` : k.orgId ? `o:${k.orgId}` : 'none';
 
@@ -74,12 +86,7 @@ export const useAiModelPickerStore = create<AiModelPickerState>()((set, get) => 
       return still && !still.disabled ? selection : null;
     };
     try {
-      // Never both: the API refuses a request carrying a sessionId and an orgId.
-      const qs = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : orgId ? `?orgId=${encodeURIComponent(orgId)}` : '';
-      // fetchWithAuth injects the ambient `?orgId=` unless told not to, which
-      // would turn a session request into the forbidden pair (#7768). The org
-      // branch keeps injection: it names the org explicitly anyway.
-      const res = await fetchWithAuth(`/ai/models/choices/chat${qs}`, ...(sessionId ? [{ skipOrgIdInjection: true }] as const : []));
+      const res = await requestChatModelChoices({ sessionId, orgId });
       if (token !== loadToken) return;
       if (!res.ok) {
         console.warn('[AiModelPicker] model choices unavailable, status', res.status);

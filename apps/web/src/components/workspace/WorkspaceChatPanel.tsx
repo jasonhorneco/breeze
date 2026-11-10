@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import WispWelcome from "../wisp/WispWelcome";
 import { useWispScopeLabel } from "../wisp/useWispScopeLabel";
 
 import AiChatMessages from "../ai/AiChatMessages";
 import AiChatInput from "../ai/AiChatInput";
+import { ModelPickerControl } from "../ai/AiModelPicker";
 import AiContextBadge from "../ai/AiContextBadge";
 import AiCostIndicator from "../ai/AiCostIndicator";
 import WorkspaceSessionChips from "./WorkspaceSessionChips";
@@ -14,8 +15,10 @@ import CreateTicketFromChatModal, {
 import { showToast } from "../shared/Toast";
 import { ActionError, handleActionError } from "@/lib/runAction";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useOrgStore } from "@/stores/orgStore";
+import { noSessionOrgId, requestChatModelChoices } from "@/stores/aiModelPickerStore";
 import { useOnWindowReturn } from "@/hooks/useOnWindowReturn";
-import type { AiTicketDraft } from "@breeze/shared";
+import type { AiModelChoicesDto, AiTicketDraft, OfferingOptions } from "@breeze/shared";
 import type { TabState } from "@/stores/workspaceStore";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
@@ -30,6 +33,7 @@ export default function WorkspaceChatPanel({ tab, onContinueInPanel }: Workspace
   const { t } = useTranslation("ai");
   const {
     sendMessage,
+    setModelChoice,
     approveExecution,
     clearPendingApproval,
     approvePlan,
@@ -53,6 +57,52 @@ export default function WorkspaceChatPanel({ tab, onContinueInPanel }: Workspace
   // its empty state and its composer — not only in the mode label above.
   const tabWisp = tab.wisp?.kind === "wisp" ? tab.wisp : null;
   const wispScopeLabel = useWispScopeLabel(tabWisp?.orgId ?? null);
+  const selectedOrgId = useOrgStore((store) => store.currentOrgId);
+  const orgId = tab.sessionId ? null : tabWisp?.orgId ?? noSessionOrgId(tab.pageContext, selectedOrgId);
+  const [menu, setMenu] = useState<{ key: string; choices: AiModelChoicesDto } | null>(null);
+  const menuKey = tab.sessionId ? `session:${tab.sessionId}` : `org:${orgId ?? ''}`;
+  useEffect(() => {
+    if (tab.isStreaming) return;
+    const controller = new AbortController();
+    void requestChatModelChoices({ sessionId: tab.sessionId, orgId, signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          if (!controller.signal.aborted) setMenu(null);
+          return;
+        }
+        const { data } = await response.json() as { data: AiModelChoicesDto };
+        if (!controller.signal.aborted) setMenu({ key: menuKey, choices: data });
+      }).catch(() => {
+        if (!controller.signal.aborted) setMenu(null);
+      });
+    return () => controller.abort();
+  }, [menuKey, orgId, tab.isStreaming, tab.sessionId]);
+
+  const choices = menu?.key === menuKey ? menu.choices : null;
+  const pending = tab.modelChoice;
+  const usableChoice = pending && choices?.allowUserChoice
+    && choices.choices.some((choice) => choice.offeringId === pending.offeringId && !choice.disabled)
+    ? pending : undefined;
+  const offeringId = usableChoice?.offeringId ?? choices?.current?.offeringId ?? choices?.defaultOfferingId ?? null;
+  const offering = choices?.choices.find((choice) => choice.offeringId === offeringId);
+  const options = usableChoice?.options ?? choices?.current?.options ?? offering?.defaults ?? {};
+  const selectModel = (id: string) => {
+    const selected = choices?.choices.find((choice) => choice.offeringId === id && !choice.disabled);
+    if (selected) setModelChoice(tab.id, { offeringId: id, options: selected.defaults });
+  };
+  const setModelOption = <K extends keyof OfferingOptions>(key: K, value: OfferingOptions[K] | undefined) => {
+    if (!offeringId) return;
+    const next = { ...options };
+    if (value === undefined) delete next[key];
+    else next[key] = value;
+    setModelChoice(tab.id, { offeringId, options: next });
+  };
+  const unavailable = !!pending && !usableChoice;
+  const send = (content: string) => {
+    if (unavailable) return;
+    return usableChoice ? sendMessage(tab.id, content, { model: usableChoice, orgId }) : sendMessage(tab.id, content);
+  };
+
 
   const hasAssistantMsg = tab.messages.some((m) => m.role === "assistant");
   const canCreateTicket = !!tab.sessionId && hasAssistantMsg;
@@ -200,7 +250,7 @@ export default function WorkspaceChatPanel({ tab, onContinueInPanel }: Workspace
         onApprovePlan={(approved) => approvePlan(tab.id, approved)}
         onAbortPlan={() => abortPlan(tab.id)}
         onPauseAi={(paused) => pauseAi(tab.id, paused)}
-        onSendQuickAction={(prompt) => sendMessage(tab.id, prompt)}
+        onSendQuickAction={send}
         onIntentDecided={() => clearPendingApproval(tab.id)}
         layout="page"
         showTimeDividers
@@ -209,7 +259,7 @@ export default function WorkspaceChatPanel({ tab, onContinueInPanel }: Workspace
           tabWisp ? (
             <WispWelcome
               scopeLabel={wispScopeLabel}
-              onSuggest={(prompt) => sendMessage(tab.id, prompt)}
+              onSuggest={send}
               briefNote={false}
             />
           ) : undefined
@@ -218,12 +268,20 @@ export default function WorkspaceChatPanel({ tab, onContinueInPanel }: Workspace
 
       {/* Input, in the thread's reading-width column (W01 #10211) */}
       <div className="mx-auto w-full max-w-3xl" data-testid="workspace-composer">
+        <ModelPickerControl choices={choices} select={selectModel} setOption={setModelOption}
+          value={{ offeringId, options }} disabled={tab.isLoading || tab.isStreaming} />
+        {unavailable && choices && (
+          <div role="status" className="flex items-center gap-2 px-3 py-2 text-xs">
+            <span>The selected model is unavailable for this conversation.</span>
+            <button type="button" className="underline" onClick={() => setModelChoice(tab.id)}>Use default</button>
+          </div>
+        )}
         <AiChatInput
-          onSend={(content) => sendMessage(tab.id, content)}
+          onSend={send}
           value={tab.composerDraft}
           onValueChange={(value) => setComposerDraft(tab.id, value)}
           onInterrupt={() => interruptResponse(tab.id)}
-          disabled={tab.isLoading}
+          disabled={tab.isLoading || unavailable}
           isStreaming={tab.isStreaming}
           isInterrupting={tab.isInterrupting}
           placeholder={tabWisp ? t("wisp.composer.placeholder") : undefined}
