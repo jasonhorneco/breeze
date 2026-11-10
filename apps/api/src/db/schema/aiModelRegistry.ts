@@ -62,6 +62,7 @@ export const partnerAiConnections = pgTable('partner_ai_connections', {
   check('partner_ai_connections_kind_chk', sql`${t.kind} IN (${sql.raw(KIND_CHECK_LITERALS)})`),
   check('partner_ai_connections_status_chk', sql`${t.status} IN ('active', 'error', 'disconnected')`),
   check('partner_ai_connections_shape_chk', sql`(${t.kind} = 'catalog') = (${t.catalogEntryId} IS NOT NULL) AND (${t.kind} = 'openai_compatible') = (${t.baseUrl} IS NOT NULL) AND (${t.kind} NOT IN (${sql.raw(ANTHROPIC_API_CHECK_LITERALS)}) OR ${t.status} = 'disconnected' OR ${t.apiKeyEncrypted} IS NOT NULL)`),
+  check('partner_ai_connections_chatgpt_plan_keyless_chk', sql`${t.kind} <> 'chatgpt_plan' OR ${t.apiKeyEncrypted} IS NULL`),
   check('partner_ai_connections_disconnected_keyless_chk', sql`${t.status} <> 'disconnected' OR ${t.apiKeyEncrypted} IS NULL`),
   check('partner_ai_connections_key_triplet_chk', sql`num_nulls(${t.apiKeyEncrypted}, ${t.keyLast4}, ${t.keyFingerprint}) IN (0, 3)`),
   check('partner_ai_connections_config_version_chk', sql`${t.configVersion} >= 1`),

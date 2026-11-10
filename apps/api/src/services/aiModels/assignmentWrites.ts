@@ -51,6 +51,11 @@ export async function assertOfferingUsableForSurface(input: {
   const c = await loadCached(input.partnerId, offeringId, input.cache);
   if (!c) throw new RegistryWriteError('That model is not available.', 'not_eligible', 422, { surface, role, field, offeringId, reason: 'not_found' });
   if (!c.facts.enabled) throw new RegistryWriteError('That model is not enabled.', 'not_eligible', 422, { surface, role, field, offeringId, reason: 'disabled' });
+  if (c.funding === 'chatgpt_plan' && (field === 'fallbackOfferingIds' ||
+      input.ctx.planWriterId !== c.facts.planOwnerId ||
+      (input.ctx.planWriterOrgId !== undefined && input.ctx.planWriterOrgId !== c.facts.planOrgId))) {
+    throw new RegistryWriteError('The subscription owner must select this model. It cannot be a fallback.', 'not_eligible', 422, { surface, role, field, offeringId });
+  }
   const reason = checkEnableEligibility(c.facts, input.ctx);
   if (reason) throw new RegistryWriteError('That model is not available.', 'not_eligible', 422, { surface, role, field, offeringId, reason });
   if (TOOL_SURFACES.has(surface) && !c.facts.supportsTools) {
@@ -142,12 +147,18 @@ async function assertFallbacks(input: {
   onCrossesFunding: (offeringId: string) => never;
 }): Promise<void> {
   const stored = new Set(input.storedIds ?? []);
+  if (input.reference?.funding === 'chatgpt_plan' && input.ids.length > 0) {
+    throw new RegistryWriteError('ChatGPT plan models do not use fallback models.', 'invalid', 422, {
+      surface: input.surface, role: input.role, field: 'fallbackOfferingIds',
+    });
+  }
   for (const id of input.ids) {
     const fb = stored.has(id)
       ? await loadCached(input.partnerId, id, input.cache)
       : await assertOfferingUsableForSurface({
         partnerId: input.partnerId, offeringId: id, surface: input.surface, role: input.role, field: 'fallbackOfferingIds', ctx: input.ctx, cache: input.cache,
       });
+    if (fb?.funding === 'chatgpt_plan') input.onCrossesFunding(id);
     if (!input.inPermittedSet(id)) input.onOutsidePermitted(id);
     if (fb && input.reference && fb.funding !== input.reference.funding && !input.crossFunding) input.onCrossesFunding(id);
   }
@@ -172,11 +183,11 @@ function assertNotOwnFallback(
  * row (role other than 'default') with defaultOfferingId null is a delete: the
  * role inherits the feature default again.
  */
-export async function putPartnerAssignments(input: { partnerId: string; rows: PartnerAssignmentInput[] }): Promise<AiModelAssignmentRow[]> {
+export async function putPartnerAssignments(input: { partnerId: string; rows: PartnerAssignmentInput[]; planWriterId?: string }): Promise<AiModelAssignmentRow[]> {
   const { partnerId } = input;
   return inPartnerRegistryWrite(partnerId, 'aiModels.putPartnerAssignments', 'Could not save the defaults.', async () => {
     const existing = await listAssignmentRows({ partnerId });
-    const ctx = await enableEligibilityContext(partnerId);
+    const ctx = { ...await enableEligibilityContext(partnerId), planWriterId: input.planWriterId };
     const cache = new Map<string, LoadedCandidate | null>();
 
     // Validate every row before writing anything.
@@ -363,12 +374,12 @@ function isBlank(row: OrgAssignmentInput): boolean {
  * offering_partner_id, and the composite FK (org_id, offering_partner_id) →
  * organizations(id, partner_id) refuses a mismatched insert.
  */
-export async function putOrgAssignments(input: { partnerId: string; orgId: string; rows: OrgAssignmentInput[] }): Promise<AiModelAssignmentRow[]> {
+export async function putOrgAssignments(input: { partnerId: string; orgId: string; rows: OrgAssignmentInput[]; planWriterId?: string }): Promise<AiModelAssignmentRow[]> {
   const { partnerId, orgId } = input;
   return inPartnerRegistryWrite(partnerId, 'aiModels.putOrgAssignments', 'Could not save the organization’s model defaults.', async () => {
     const partnerRows = await listAssignmentRows({ partnerId });
     const orgRows = await listAssignmentRows({ partnerId, orgId });
-    const ctx = await enableEligibilityContext(partnerId);
+    const ctx = { ...await enableEligibilityContext(partnerId), planWriterId: input.planWriterId, planWriterOrgId: orgId };
     const cache = new Map<string, LoadedCandidate | null>();
 
     // Validate every row before writing anything.

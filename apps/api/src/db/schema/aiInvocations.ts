@@ -4,7 +4,7 @@
 // AUDIT_ADMIN_REQUIRED_TABLES. No FKs on provenance ids (see the migration).
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, char, index, integer, jsonb, numeric, pgTable, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import type { AiSurface, PromptProfile } from '@breeze/shared';
+import { AI_FUNDING_SOURCES, type AiSurface, type PromptProfile } from '@breeze/shared';
 import { organizations } from './orgs';
 
 export const AI_INVOCATION_LEDGER_MODES = ['shadow', 'authoritative'] as const;
@@ -42,7 +42,7 @@ export const aiInvocations = pgTable('ai_invocations', {
   sourceRef: text('source_ref'),
   offeringId: uuid('offering_id'),
   connectionId: uuid('connection_id'),
-  fundingSource: text('funding_source', { enum: ['platform', 'partner_key'] }).notNull(),
+  fundingSource: text('funding_source', { enum: AI_FUNDING_SOURCES }).notNull(),
   requestedModel: text('requested_model').notNull(),
   servedModel: text('served_model').notNull(),
   optionsSent: jsonb('options_sent').$type<Record<string, unknown>>().notNull().default({}),

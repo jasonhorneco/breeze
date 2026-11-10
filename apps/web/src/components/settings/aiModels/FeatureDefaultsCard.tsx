@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import ModelProviderSelect from '@/components/ai/ModelProviderSelect';
 import { useTranslation } from 'react-i18next';
 import type { AiModelsSnapshotDto, AiOfferingDto, AiSurfaceDefaultsDto } from '@breeze/shared';
 import { ROLE_LABEL_KEYS, SURFACE_LABEL_KEYS, unavailableIds, unavailableModelLabel } from './surfaceLabels';
@@ -10,7 +11,7 @@ import {
 } from '../partnerSettings/units/aiFeatureDefaultsUnit';
 
 // Literal key maps: the i18n keyUsage test cannot check template keys.
-const EFFORT_KEYS: Record<Effort, string> = {
+const EFFORT_KEYS: Partial<Record<Effort, string>> = {
   low: 'aiModels.defaults.effortValues.low',
   medium: 'aiModels.defaults.effortValues.medium',
   high: 'aiModels.defaults.effortValues.high',
@@ -73,7 +74,8 @@ function normalize(draft: RowDraft, eligible: AiOfferingDto[], d: AiSurfaceDefau
   const opts = optionChoices(model);
   const refFunding = model?.funding ?? null;
   const fallbacks = next.fallbacks.filter((id) =>
-    id !== next.defaultOfferingId && (next.crossFunding || refFunding === null || fundingOf(snapshot, id) === undefined || fundingOf(snapshot, id) === refFunding));
+    id !== next.defaultOfferingId && refFunding !== 'chatgpt_plan' && fundingOf(snapshot, id) !== 'chatgpt_plan' &&
+    (next.crossFunding || refFunding === null || fundingOf(snapshot, id) === undefined || fundingOf(snapshot, id) === refFunding));
   return {
     ...next,
     fallbacks,
@@ -148,6 +150,11 @@ export default function FeatureDefaultsCard({
           const eligible = eligibleOfferings(snapshot, d.requiresTools);
           const choices = defaultChoices(eligible, draft);
           const model = eligible.find((o) => o.id === draft.defaultOfferingId);
+          const providers = choices.map(o => ({
+            id: o.id as string, provider: o.connectionId ?? 'platform',
+            label: snapshot.connections.find(connection => connection.id === o.connectionId)?.name ?? 'Breeze platform',
+          }));
+          const visibleModels = model ? choices.filter(o => o.connectionId === model.connectionId) : choices;
           const opts = optionChoices(model);
           const problem = dirty.has(k) ? rowProblem(k, draft) : null;
           const invalid = state.invalidRow === k || problem !== null;
@@ -160,7 +167,8 @@ export default function FeatureDefaultsCard({
             permitted: on ? [...draft.permitted, offeringId] : draft.permitted.filter((p) => p !== offeringId),
           });
           const setBlank = roleRow && draft.defaultOfferingId === '';
-          const fallbackOptions = eligible.filter((o) => o.id !== draft.defaultOfferingId);
+          const fallbackOptions = eligible.filter((o) => o.id !== draft.defaultOfferingId &&
+            o.funding !== 'chatgpt_plan' && model?.funding !== 'chatgpt_plan');
           const toggleCrossFunding = (on: boolean) => edit(d, { crossFunding: on });
           return (
             <li
@@ -201,6 +209,9 @@ export default function FeatureDefaultsCard({
               )}
 
               <div className="grid gap-3 sm:grid-cols-2">
+                {choices.some(o => o.funding === 'chatgpt_plan') && <ModelProviderSelect
+                  choices={providers} selected={draft.defaultOfferingId} testId={`ai-defaults-provider-${id}`}
+                  onSelect={defaultOfferingId => edit(d, { defaultOfferingId })} />}
                 <label className="space-y-1 text-xs font-medium">
                   <span>{t('aiModels.defaults.default')}</span>
                   <select
@@ -217,7 +228,8 @@ export default function FeatureDefaultsCard({
                     {staleDefault && (
                       <option value={draft.defaultOfferingId}>{unavailableModelLabel(t, nameOf(draft.defaultOfferingId))}</option>
                     )}
-                    {choices.map((o) => <option key={o.id as string} value={o.id as string}>{o.displayName}</option>)}
+                    {(choices.some(o => o.funding === 'chatgpt_plan') ? visibleModels : choices)
+                      .map((o) => <option key={o.id as string} value={o.id as string}>{o.displayName}</option>)}
                     {snapshot.reviewProvider && (
                       <option value="codex-review-only" disabled>
                         {snapshot.reviewProvider.provider} · {snapshot.reviewProvider.model.displayName} · Alert review only
@@ -281,7 +293,9 @@ export default function FeatureDefaultsCard({
                     className="h-9 w-full rounded-md border bg-background px-2 text-sm font-normal"
                   >
                     <option value="">{t('aiModels.defaults.modelDefault')}</option>
-                    {opts.effort.map((v) => <option key={v} value={v}>{t(/* i18n-dynamic */ EFFORT_KEYS[v])}</option>)}
+                    {opts.effort.map((v) => <option key={v} value={v}>
+                      {EFFORT_KEYS[v] ? t(/* i18n-dynamic */ EFFORT_KEYS[v]) : v[0].toUpperCase() + v.slice(1)}
+                    </option>)}
                   </select>
                 </label>
                 <label className="space-y-1 text-xs font-medium">

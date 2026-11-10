@@ -16,6 +16,7 @@ import { showToast } from '../../shared/Toast';
 import { navigateTo } from '@/lib/navigation';
 import { DEFAULT_SOURCE_KEYS, ROLE_LABEL_KEYS, SURFACE_LABEL_KEYS, registryFriendly, unavailableIds, unavailableModelLabel } from './surfaceLabels';
 import { FallbackListEditor } from './FallbackListEditor';
+import ModelProviderSelect from '@/components/ai/ModelProviderSelect';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const onUnauthorized = () => { void navigateTo('/login', { replace: true }); };
@@ -26,7 +27,7 @@ type Speed = NonNullable<Options['speed']>;
 type Offering = AiOrgModelDefaultsDto['offerings'][number];
 
 // Literal key maps: the i18n keyUsage test cannot check template keys.
-const EFFORT_KEYS: Record<EffortLevel, string> = {
+const EFFORT_KEYS: Partial<Record<EffortLevel, string>> = {
   low: 'aiModels.defaults.effortValues.low',
   medium: 'aiModels.defaults.effortValues.medium',
   high: 'aiModels.defaults.effortValues.high',
@@ -341,6 +342,12 @@ export default function OrgModelDefaultsCard({ orgId }: { orgId: string }) {
           const disabled = rowDisabled(s);
           const base = partnerChoices(dto, d);
           const choices = effectiveSet(dto, d, draft);
+          const model = choices.find(o => o.id === draft.defaultOfferingId);
+          const providers = choices.map(o => ({
+            id: o.id as string, provider: o.connectionId ?? o.funding,
+            label: o.providerName ?? (o.funding === 'chatgpt_plan' ? 'OpenAI Codex' : 'Breeze platform'),
+          }));
+          const visibleModels = model ? choices.filter(o => (o.connectionId ?? o.funding) === (model.connectionId ?? model.funding)) : choices;
           const opts = optionChoices(dto, d, draft);
           const inhModel = modelName(dto, d.inherited.defaultOfferingId);
           const effModel = modelName(dto, d.effective.defaultOfferingId);
@@ -374,6 +381,9 @@ export default function OrgModelDefaultsCard({ orgId }: { orgId: string }) {
               {isReviewer(s) && <p className="text-xs text-muted-foreground">{t('aiModels.defaults.reviewerHelp')}</p>}
 
               <div className="grid gap-3 sm:grid-cols-2">
+                {choices.some(o => o.funding === 'chatgpt_plan') && <ModelProviderSelect
+                  choices={providers} selected={draft.defaultOfferingId} testId={`org-model-defaults-provider-${id}`}
+                  disabled={disabled} onSelect={defaultOfferingId => edit(d, { defaultOfferingId })} />}
                 <label className="space-y-1 text-xs font-medium">
                   <span>{t('aiModels.defaults.default')}</span>
                   <select
@@ -388,7 +398,8 @@ export default function OrgModelDefaultsCard({ orgId }: { orgId: string }) {
                     {staleDefault && (
                       <option value={draft.defaultOfferingId}>{unavailableModelLabel(t, modelName(dto, draft.defaultOfferingId))}</option>
                     )}
-                    {choices.map((o) => <option key={o.id as string} value={o.id as string}>{o.displayName}</option>)}
+                    {(choices.some(o => o.funding === 'chatgpt_plan') ? visibleModels : choices)
+                      .map((o) => <option key={o.id as string} value={o.id as string}>{o.displayName}</option>)}
                   </select>
                 </label>
                 <label className="space-y-1 text-xs font-medium">
@@ -452,8 +463,11 @@ export default function OrgModelDefaultsCard({ orgId }: { orgId: string }) {
                     onChange={(e) => edit(d, { effort: e.target.value as EffortLevel | '' })}
                     className={selectCls + errCls(id, 'effort')}
                   >
-                    <option value="">{inheritLabel(t, inhOpts.effort ? t(/* i18n-dynamic */ EFFORT_KEYS[inhOpts.effort]) : null)}</option>
-                    {opts.effort.map((v) => <option key={v} value={v}>{t(/* i18n-dynamic */ EFFORT_KEYS[v])}</option>)}
+                    <option value="">{inheritLabel(t, inhOpts.effort
+                      ? t(/* i18n-dynamic */ EFFORT_KEYS[inhOpts.effort] ?? '', { defaultValue: inhOpts.effort }) : null)}</option>
+                    {opts.effort.map((v) => <option key={v} value={v}>
+                      {EFFORT_KEYS[v] ? t(/* i18n-dynamic */ EFFORT_KEYS[v]) : v[0].toUpperCase() + v.slice(1)}
+                    </option>)}
                   </select>
                 </label>
                 <label className="space-y-1 text-xs font-medium">

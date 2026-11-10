@@ -24,14 +24,14 @@ import type { ResolvedModel } from '../aiModels/resolveModel';
  */
 export function admissionServedColumns(resolved: Pick<ResolvedModel, 'offering' | 'funding' | 'failover'>): {
   servedOfferingId: string | null;
-  servedFundingSource: ResolvedModel['funding'] | null;
+  servedFundingSource: Exclude<ResolvedModel['funding'], 'chatgpt_plan'> | null;
   servedFailoverHop: number | null;
   servedFailoverCause: FailoverCause | null;
   servedFailoverFromOfferingId: string | null;
 } {
   const f = resolved.failover;
   // ai_agent_runs_served_chk: hop 1..MAX_FAILOVER_HOP, all four or none.
-  if (!f || !resolved.offering.id || !Number.isInteger(f.hop) || f.hop < 1 || f.hop > MAX_FAILOVER_HOP) {
+  if (!f || resolved.funding === 'chatgpt_plan' || !resolved.offering.id || !Number.isInteger(f.hop) || f.hop < 1 || f.hop > MAX_FAILOVER_HOP) {
     return {
       servedOfferingId: null, servedFundingSource: null, servedFailoverHop: null,
       servedFailoverCause: null, servedFailoverFromOfferingId: null,

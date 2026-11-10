@@ -23,7 +23,8 @@ aiModelsRoutes.use('*', authMiddleware);
 aiModelsRoutes.get('/', ...partnerRead, async (c) => {
   const { partnerId } = requirePartnerWide(c);
   const snapshot = await buildPartnerModelsSnapshot(partnerId);
-  const reviewProvider = codexReviewCatalog(c.get('auth'));
+  const reviewProvider = snapshot.connections.some(conn => conn.kind === 'chatgpt_plan')
+    ? undefined : codexReviewCatalog(c.get('auth'));
   return c.json(reviewProvider ? { ...snapshot, reviewProvider } : snapshot);
 });
 

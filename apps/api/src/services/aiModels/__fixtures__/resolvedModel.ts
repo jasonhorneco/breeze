@@ -12,7 +12,7 @@ export const FIXTURE_STD_RATES: ModelRates = {
   inputCentsPerM: 200, outputCentsPerM: 1000, cacheReadCentsPerM: 20, cacheWriteCentsPerM: 250,
 };
 
-export type FixtureConnectionKind = AiConnectionKind;
+export type FixtureConnectionKind = Exclude<AiConnectionKind, 'chatgpt_plan'>;
 
 /** W06: a verified openai_compatible offering reached through the loopback model gateway. */
 function gatewayResolvedModel(over: Partial<ResolvedModel>): ResolvedModel {

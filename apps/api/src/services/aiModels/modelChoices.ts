@@ -14,6 +14,7 @@
  * another partner's offering.
  */
 import type { AiModelChoiceDto, AiModelChoicesDto } from '@breeze/shared';
+import { listConnections } from './connections';
 import { runOutsideDbContext, withSystemDbAccessContext } from '../../db';
 import { LlmUnavailableError } from '../llm/llmUnavailableError';
 import { getEffectiveAssignment, isPermitted } from './assignments';
@@ -41,7 +42,8 @@ export async function listModelChoices(input: {
   partnerId: string;
   orgId: string | null;
   userId: string | null;
-  surface: 'chat' | 'ai_agents';
+  surface: 'chat' | 'script_builder' | 'ai_agents';
+  planUserSession?: boolean;
   /**
    * Chat: the session's stamped choice — `ai_sessions.offering_id` /
    * `options` as `stampSessionBinding` wrote them, i.e. the offering and the
@@ -88,12 +90,13 @@ export async function listModelChoices(input: {
 
   const transport = defaultTransport(input.surface);
   const ctx = await eligibilityContextFor({
-    partnerId: input.partnerId, orgId: input.orgId, userId: input.userId, surface: input.surface, transport,
+    partnerId: input.partnerId, orgId: input.orgId, userId: input.userId, planUserSession: input.planUserSession, surface: input.surface, transport,
   });
   const asIfPermitted: EligibilityContext = { ...ctx, userHoldsPermission: () => true };
   const roleNames = new Map<string, Promise<string[]>>();
 
   const choices: AiModelChoiceDto[] = [];
+  const providerByOffering = new Map<string, string | null>();
   for (const id of ids) {
     // Sequential on purpose: each load opens short system transactions;
     // a parallel fan-out would take that many pooled connections at once.
@@ -112,6 +115,16 @@ export async function listModelChoices(input: {
       continue;   // defensive: asIfPermitted differs from ctx only in the permission rule
     }
     choices.push(toChoice(c, transport, assignment.options, disabled));
+    providerByOffering.set(c.offeringId, c.connectionId);
+  }
+
+  if (choices.some(choice => choice.funding === 'chatgpt_plan')) {
+    const connections = await inSystem(() => listConnections(input.partnerId));
+    const names = new Map(connections.map(connection => [connection.id, connection.name]));
+    for (const choice of choices) {
+      const id = providerByOffering.get(choice.offeringId);
+      choice.provider = { id: id ?? 'platform', name: id ? names.get(id) ?? 'AI provider' : 'Breeze platform' };
+    }
   }
 
   choices.sort((a, b) => {

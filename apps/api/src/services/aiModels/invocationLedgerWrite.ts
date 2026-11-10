@@ -5,7 +5,7 @@
  * joins that transaction. (W06 deleted the W02 shadow listener; historical
  * rows keep `ledger_mode = 'shadow'`.)
  */
-import type { AiSurface, OfferingOptions, PromptProfile } from '@breeze/shared';
+import type { AiFundingSource, AiSurface, OfferingOptions, PromptProfile } from '@breeze/shared';
 import { db } from '../../db';
 import { aiInvocations } from '../../db/schema';
 import type { AiInvocationModelRole } from '../../db/schema/aiInvocations';
@@ -25,7 +25,7 @@ export interface NewInvocation {
   sourceRef?: string | null;
   offeringId?: string | null;
   connectionId?: string | null;
-  fundingSource: 'platform' | 'partner_key';
+  fundingSource: AiFundingSource;
   requestedModel: string;
   servedModel: string;
   optionsSent?: OfferingOptions;

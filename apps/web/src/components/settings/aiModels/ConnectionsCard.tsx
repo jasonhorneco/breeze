@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { AiConnectionDto, AiModelsSnapshotDto } from '@breeze/shared';
 import ConnectionDrawer from './ConnectionDrawer';
+import PlanConnectionDrawer from './PlanConnectionDrawer';
 import ResidencySwitch from './ResidencySwitch';
 import { ADDABLE_CONNECTION_KINDS, ADD_KIND_LABEL_KEYS, ADD_KIND_TEST_IDS, type AddableConnectionKind } from './connectionForms/connectionKinds';
 import { resolvedFormattingLocale } from '../../../lib/i18n/format';
@@ -15,6 +16,7 @@ function kindLabel(connection: AiConnectionDto, t: TFunction<'settings'>): strin
     case 'anthropic_byok': return t('aiModels.connections.kind.anthropic_byok');
     case 'catalog': return t('aiModels.connections.kind.catalog');
     case 'openai_compatible': return t('aiModels.connections.kind.openai_compatible');
+    case 'chatgpt_plan': return 'OpenAI Codex';
     default: {
       const unreachable: never = kind;
       return String(unreachable);
@@ -79,6 +81,7 @@ export default function ConnectionsCard({
   const [chooserOpen, setChooserOpen] = useState(false);
   const modelCount = (id: string | null) => snapshot.offerings.filter((o) => o.connectionId === id).length;
   const editing = drawer.mode === 'edit' ? snapshot.connections.find((c) => c.id === drawer.id) ?? null : null;
+  const plan = snapshot.connections.find(connection => connection.kind === 'chatgpt_plan');
 
   return (
     <section data-testid="ai-connections-card" className="space-y-3 rounded-md border p-4">
@@ -112,7 +115,16 @@ export default function ConnectionsCard({
                     <span className="block font-medium">{t(/* i18n-dynamic */ ADD_KIND_LABEL_KEYS[k])}</span>
                   </button>
                 ))}
-                {snapshot.reviewProvider && (
+                {plan?.id && (
+                  <button type="button" data-testid="ai-connection-add-chatgpt-plan" onClick={() => {
+                    setChooserOpen(false);
+                    setDrawer({ mode: 'edit', id: plan.id as string });
+                  }} className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted">
+                    <span className="block font-medium">OpenAI Codex</span>
+                    <span className="block text-xs text-muted-foreground">Sign in with ChatGPT</span>
+                  </button>
+                )}
+                {!plan && snapshot.reviewProvider && (
                   <button type="button" onClick={() => {
                     setChooserOpen(false);
                     document.getElementById('codex-review-connection')?.scrollIntoView({ block: 'nearest' });
@@ -187,7 +199,8 @@ export default function ConnectionsCard({
                   </>)}
                 </td>
                 <td className="py-2 pr-3">
-                  {c.funding === 'platform' ? t('aiModels.connections.funding.platform') : t('aiModels.connections.funding.partner_key')}
+                  {c.funding === 'chatgpt_plan' ? 'ChatGPT subscription' :
+                    c.funding === 'platform' ? t('aiModels.connections.funding.platform') : t('aiModels.connections.funding.partner_key')}
                 </td>
                 <td className="py-2 text-right">
                   {c.id !== null && (
@@ -226,7 +239,11 @@ export default function ConnectionsCard({
         <ConnectionDrawer connection={null} initialKind={drawer.kind} catalog={snapshot.catalog} catalogEnabled={snapshot.catalogEnabled}
           onClose={() => setDrawer({ mode: 'closed' })} onSaved={onChanged} />
       )}
-      {drawer.mode === 'edit' && editing && (
+      {drawer.mode === 'edit' && editing?.kind === 'chatgpt_plan' && (
+        <PlanConnectionDrawer connection={editing} modelCount={modelCount(editing.id)}
+          onClose={() => setDrawer({ mode: 'closed' })} onSaved={onChanged} />
+      )}
+      {drawer.mode === 'edit' && editing && editing.kind !== 'chatgpt_plan' && (
         <ConnectionDrawer key={editing.id} connection={editing} catalog={snapshot.catalog} catalogEnabled={snapshot.catalogEnabled}
           onClose={() => setDrawer({ mode: 'closed' })} onSaved={onChanged} />
       )}

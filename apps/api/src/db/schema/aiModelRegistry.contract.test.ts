@@ -21,14 +21,15 @@ export function checkLiterals(sqlText: string, column: string): string[] {
 
 describe('partner_ai_connections contract (#7600 W02)', () => {
   const sqlText = readMigration('2026-11-14-100000-ai-model-registry-connections.sql');
+  const currentKinds = readMigration('2027-01-20-100000-chatgpt-plan-connection.sql');
 
   it('the kind CHECK lists exactly the Drizzle kinds', () => {
-    expect(checkLiterals(sqlText, 'kind')).toEqual([...PARTNER_AI_CONNECTION_KINDS]);
+    expect(checkLiterals(currentKinds, 'kind')).toEqual([...PARTNER_AI_CONNECTION_KINDS]);
   });
 
   it('the Drizzle kinds ARE the shared row kinds (one source, #7779)', () => {
     expect(PARTNER_AI_CONNECTION_KINDS).toBe(AI_CONNECTION_ROW_KINDS);
-    expect(checkLiterals(sqlText, 'kind')).toEqual([...AI_CONNECTION_ROW_KINDS]);
+    expect(checkLiterals(currentKinds, 'kind')).toEqual([...AI_CONNECTION_ROW_KINDS]);
   });
 
   it('the Drizzle kind CHECK is generated from the shared kinds', () => {

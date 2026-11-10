@@ -277,6 +277,7 @@ export async function createSession(
     offeringPartnerId: string | null;
   } = await chooseSessionModel({
     partnerId, orgId, userId: auth.user.id, surface: 'chat',
+    planUserSession: auth.principal?.kind === 'user_session' && !auth.aiOrigin,
     ...(options.offeringId ? { offeringId: options.offeringId } : {}),
     ...(options.options ? { options: options.options } : {}),
   });

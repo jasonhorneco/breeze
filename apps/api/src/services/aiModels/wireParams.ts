@@ -26,7 +26,7 @@
  * now compacts on the previous model instead of failing (see W05 findings).
  */
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
-import type { EffortLevel, OfferingOptions, OptionSupport, ThinkingDisplay } from '@breeze/shared';
+import { ANTHROPIC_EFFORT_LEVELS, type AnthropicEffortLevel, type OfferingOptions, type OptionSupport, type ThinkingDisplay } from '@breeze/shared';
 import type { ThinkingMode } from './capabilities';
 
 export const THINKING_DISPLAY_UPDATES_BETA = 'thinking-display-updates-2026-08-18';
@@ -60,7 +60,7 @@ export type WireThinking =
 
 export interface WireParams {
   thinking?: WireThinking;
-  effort?: EffortLevel;
+  effort?: AnthropicEffortLevel;
   speed?: 'fast';
   inferenceGeo?: string;
   betas: string[];
@@ -94,9 +94,10 @@ export function buildWireParams(input: BuildWireParamsInput): WireParams {
       if (requested.thinkingDisplay === 'updates') betas.push(THINKING_DISPLAY_UPDATES_BETA);
     }
     wire.thinking = thinking;
-    if (requested.effort && support.effort.includes(requested.effort)) {
-      wire.effort = requested.effort;
-      applied.effort = requested.effort;
+    const effort = ANTHROPIC_EFFORT_LEVELS.find(level => level === requested.effort);
+    if (effort && support.effort.includes(effort)) {
+      wire.effort = effort;
+      applied.effort = effort;
     }
   } else if (thinkingMode === 'budget') {
     // Spec §7: "Thinking: off / on (budget)". Off (or unset) keeps W00 parity
@@ -174,7 +175,7 @@ export function toAgentSdkOptions(wire: WireParams): AgentSdkThinkingOptions {
 
 export interface MessagesApiThinkingParams {
   thinking?: { type: 'adaptive'; display?: 'omitted' | 'summarized' };
-  output_config?: { effort: EffortLevel };
+  output_config?: { effort: AnthropicEffortLevel };
 }
 
 /**

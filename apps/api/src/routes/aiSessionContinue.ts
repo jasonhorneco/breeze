@@ -98,6 +98,7 @@ export async function continueAiSession(
   try {
     target = await chooseSessionModel({
       partnerId, orgId: session.orgId, userId: auth.user.id, surface: 'chat',
+      planUserSession: auth.principal?.kind === 'user_session' && !auth.aiOrigin,
       offeringId: choice.offeringId, ...(choice.options ? { options: choice.options } : {}),
     });
   } catch (err) {
@@ -111,6 +112,7 @@ export async function continueAiSession(
   // options) for the Messages API one-shot.
   const summaryModel = await resolveModel({
     partnerId, orgId: session.orgId, userId: auth.user.id, surface: 'chat',
+    planUserSession: auth.principal?.kind === 'user_session' && !auth.aiOrigin,
     requested: { offeringId: choice.offeringId, origin: 'user' },
     transport: 'messages_api', maxTokens: CONTINUATION_SUMMARY_MAX_TOKENS,
   });

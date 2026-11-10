@@ -1,16 +1,20 @@
-import type { GatewayConnectionKind } from '@breeze/shared';
+import type { EffortLevel } from '@breeze/shared';
 
 export type GatewayDialect = 'anthropic' | 'bedrock' | 'vertex' | 'foundry';
 
 /** The `source: 'gateway'` arm of a resolved connection's config. W07 appends cloud arms. */
-export type GatewayConnectionConfig = {
+interface GatewayConnectionBase {
   source: 'gateway';
-  kind: GatewayConnectionKind;
   partnerId: string;
   connectionId: string;
   configVersion: number;
   baseUrl: string;
-};
+}
+
+export type GatewayConnectionConfig = GatewayConnectionBase & (
+  | { kind: 'openai_compatible' }
+  | { kind: 'chatgpt_plan'; effort?: EffortLevel | null; catalogSearch?: boolean }
+);
 
 export interface GatewayCredential {
   /** Decrypted secret, or null for a keyless endpoint. Never serialised, logged or returned. */

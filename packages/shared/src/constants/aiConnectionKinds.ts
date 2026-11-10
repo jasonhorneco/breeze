@@ -8,10 +8,10 @@
  * (apps/api/src/services/aiModels/gateway): their credentials never leave it.
  * The Anthropic-dialect kinds (anthropic_byok, catalog) keep their direct path.
  */
-export const AI_CONNECTION_ROW_KINDS = ['anthropic_byok', 'catalog', 'openai_compatible'] as const;
+export const AI_CONNECTION_ROW_KINDS = ['anthropic_byok', 'catalog', 'openai_compatible', 'chatgpt_plan'] as const;
 export type AiConnectionRowKind = (typeof AI_CONNECTION_ROW_KINDS)[number];
 
-export const GATEWAY_CONNECTION_KINDS = ['openai_compatible'] as const;
+export const GATEWAY_CONNECTION_KINDS = ['openai_compatible', 'chatgpt_plan'] as const;
 export type GatewayConnectionKind = (typeof GATEWAY_CONNECTION_KINDS)[number];
 
 const GATEWAY_SET: ReadonlySet<string> = new Set(GATEWAY_CONNECTION_KINDS);
@@ -40,6 +40,9 @@ export function isAnthropicApiConnectionKind(kind: string): kind is AnthropicApi
  */
 export const AI_CONNECTION_KINDS = ['platform', ...AI_CONNECTION_ROW_KINDS] as const;
 export type AiConnectionKind = (typeof AI_CONNECTION_KINDS)[number];
+
+export const AI_FUNDING_SOURCES = ['platform', 'partner_key', 'chatgpt_plan'] as const;
+export type AiFundingSource = (typeof AI_FUNDING_SOURCES)[number];
 
 /**
  * Kinds a turn can dispatch through (eligibility, turn binding): platform, the

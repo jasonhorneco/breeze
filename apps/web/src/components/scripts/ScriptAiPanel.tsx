@@ -1,7 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Undo2, Redo2 } from 'lucide-react';
-import { useScriptAiStore, buildEditorContext } from '@/stores/scriptAiStore';
+import { useScriptAiStore } from '@/stores/scriptAiStore';
+import { fetchWithAuth } from '@/stores/auth';
+import { ModelPickerControl } from '@/components/ai/AiModelPicker';
+import type { AiModelChoicesDto, OfferingOptions } from '@breeze/shared';
 import ScriptAiMessages from './ScriptAiMessages';
 import ScriptAiInput from './ScriptAiInput';
 import type { ScriptFormBridge } from '@/stores/scriptAiStore';
@@ -12,10 +15,13 @@ interface ScriptAiPanelProps {
 
 export default function ScriptAiPanel({ bridge }: ScriptAiPanelProps) {
   const { t } = useTranslation('scripts');
+  const [modelChoices, setModelChoices] = useState<AiModelChoicesDto | null>(null);
   const {
     closePanel,
     sessionId,
-    createSession,
+    modelSelection,
+    setModelSelection,
+    isLoading,
     closeSession,
     interruptResponse,
     setBridge,
@@ -33,12 +39,35 @@ export default function ScriptAiPanel({ bridge }: ScriptAiPanelProps) {
     return () => setBridge(null);
   }, [bridge, setBridge]);
 
-  // Create session when panel mounts for the first time
+  // A session starts on the first message so the chosen model can be bound at creation.
   useEffect(() => {
-    if (!sessionId) {
-      createSession(buildEditorContext(bridge));
-    }
-  }, [sessionId, createSession, bridge]);
+    const abort = new AbortController();
+    void fetchWithAuth('/ai/models/choices/script-builder', { signal: abort.signal })
+      .then(async response => response.ok ? await response.json() as { data: AiModelChoicesDto } : null)
+      .then(result => {
+        if (!abort.signal.aborted) setModelChoices(result?.data ?? null);
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) setModelChoices(null);
+      });
+    return () => abort.abort();
+  }, []);
+
+  const offeringId = modelSelection?.offeringId ?? modelChoices?.defaultOfferingId ?? null;
+  const modelOptions = modelSelection?.options ?? modelChoices?.choices.find(choice => choice.offeringId === offeringId)?.defaults ?? {};
+
+  function selectModel(id: string) {
+    const choice = modelChoices?.choices.find(model => model.offeringId === id && !model.disabled);
+    if (choice) setModelSelection({ offeringId: id, options: { ...choice.defaults } });
+  }
+
+  function setModelOption<K extends keyof OfferingOptions>(key: K, value: OfferingOptions[K] | undefined) {
+    if (!offeringId) return;
+    const options = { ...modelOptions };
+    if (value === undefined) delete options[key];
+    else options[key] = value;
+    setModelSelection({ offeringId, options });
+  }
 
   // Cleanup session on unmount — interrupt first if streaming
   useEffect(() => {
@@ -106,6 +135,8 @@ export default function ScriptAiPanel({ bridge }: ScriptAiPanelProps) {
       <ScriptAiMessages />
 
       {/* Input */}
+      <ModelPickerControl choices={modelChoices} select={selectModel} setOption={setModelOption}
+        value={{ offeringId, options: modelOptions }} disabled={Boolean(sessionId) || isLoading} />
       <ScriptAiInput />
     </div>
   );

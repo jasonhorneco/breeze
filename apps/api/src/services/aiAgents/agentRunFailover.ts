@@ -43,11 +43,13 @@ export async function recordServedHop(
   runId: string,
   served: { offeringId: string; funding: AiBillingSource; hop: number; cause: FailoverCause },
 ): Promise<void> {
+  if (served.funding === 'chatgpt_plan') throw new Error('A ChatGPT plan model cannot serve as a fallback');
+  const funding = served.funding;
   await inSystemDbContext(() => db
     .update(aiAgentRuns)
     .set({
       servedOfferingId: served.offeringId,
-      servedFundingSource: served.funding,
+      servedFundingSource: funding,
       servedFailoverHop: served.hop,
       servedFailoverCause: served.cause,
       servedFailoverFromOfferingId: null,

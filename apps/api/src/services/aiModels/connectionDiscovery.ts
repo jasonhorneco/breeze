@@ -21,5 +21,8 @@ export type ConnectionModelDiscoverer = (input: {
 }) => Promise<DiscoveredConnectionModel[]>;
 
 export const CONNECTION_MODEL_DISCOVERERS: Partial<Record<GatewayConnectionKind, ConnectionModelDiscoverer>> = {
-  openai_compatible: ({ config, credential }) => discoverOpenAiCompatibleModels({ config, credential }),
+  openai_compatible: ({ config, credential }) => {
+    if (config.kind !== 'openai_compatible') throw new Error('Unexpected gateway for model discovery');
+    return discoverOpenAiCompatibleModels({ config, credential });
+  },
 };

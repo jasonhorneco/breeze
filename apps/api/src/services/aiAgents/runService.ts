@@ -1178,6 +1178,7 @@ async function resolveAgentModelForAdmission(
   orgId: string,
   offeringId: string | null,
   role: AiAgentEscalationRole,
+  shadow: boolean,
 ): Promise<AdmissionModel> {
   // Loaded lazily: the resolver's module graph (candidate loader, the schema
   // barrel, the registry cutover) is only needed on the admission path, and
@@ -1194,7 +1195,7 @@ async function resolveAgentModelForAdmission(
     return { ok: false, message: 'No AI model is available for AI agents.', notify: false };
   }
   const result = await resolveModel({
-    partnerId, orgId, surface: 'ai_agents', role,
+    partnerId, orgId, surface: 'ai_agents', role, planConfigured: shadow,
     ...(offeringId ? { requested: { offeringId, origin: 'policy' as const } } : {}),
   });
   if (result.ok) return { ok: true, resolved: result };
@@ -1513,7 +1514,7 @@ export async function createAndEnqueueAgentRun(
   //     registry cutover), which must never happen while this admission holds
   //     a connection idle in transaction behind its advisory lock.
   const modelRole = agentRunModelRole({ profile: input.profile ?? 'full', modeAtStart });
-  const agentModel = await resolveAgentModelForAdmission(orgId, effective.offeringId ?? null, modelRole);
+  const agentModel = await resolveAgentModelForAdmission(orgId, effective.offeringId ?? null, modelRole, modeAtStart === 'shadow');
   if (!agentModel.ok) {
     if (agentModel.notify) {
       await notifyAdmissionModelBlocked(orgId, resolved.agentId, effective.recipients, agentModel.message)

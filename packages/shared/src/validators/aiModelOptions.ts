@@ -9,7 +9,9 @@
  */
 import { z } from 'zod';
 
-export const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export const ANTHROPIC_EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type AnthropicEffortLevel = (typeof ANTHROPIC_EFFORT_LEVELS)[number];
+export const EFFORT_LEVELS = ['none', 'minimal', ...ANTHROPIC_EFFORT_LEVELS, 'ultra'] as const;
 export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
 export const THINKING_DISPLAYS = ['omitted', 'summarized', 'updates'] as const;

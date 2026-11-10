@@ -54,7 +54,10 @@ aiModelOrgAssignmentRoutes.put('/:orgId/assignments',
     // Same rule as the partner PUT: the script reviewer's model is a privileged setting.
     if (touchesSurface(assignments, 'script_reviewer') && !canDecideApprovals(c)) return c.json(APPROVALS_DECIDE_REQUIRED, 403);
     return registryWrite(c, partnerId, async () => {
-      const rows = await putOrgAssignments({ partnerId, orgId, rows: assignments });
+      const auth = c.get('auth');
+      const rows = await putOrgAssignments({ partnerId, orgId, rows: assignments,
+        ...(auth?.principal?.kind === 'user_session' && !auth.aiOrigin ? { planWriterId: auth.user.id } : {}),
+      });
       writeRouteAudit(c, {
         orgId,
         action: 'ai_models.org_assignments.updated',

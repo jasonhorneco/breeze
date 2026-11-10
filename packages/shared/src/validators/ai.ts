@@ -148,4 +148,5 @@ export const scriptBuilderContextSchema = z.object({
 export const createScriptBuilderSessionSchema = z.object({
   context: scriptBuilderContextSchema.optional(),
   title: z.string().max(255).optional(),
+  model: aiModelChoiceSchema.optional(),
 });

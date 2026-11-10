@@ -128,6 +128,7 @@ async function resolveEnrichmentModel(actor: EnrichmentActor): Promise<{ resolve
     orgId: actor.orgId,
     userId: actor.systemInitiated ? null : actor.userId,
     surface: 'catalog_enrichment',
+    planConfigured: actor.orgId !== null,
     maxTokens: 1024,
   });
   if (!resolved.ok) throw new EnrichmentError(resolved.message, 'AI_UNAVAILABLE', 503);
@@ -300,6 +301,7 @@ export const aiEnrichmentProvider: EnrichmentProvider = {
     // The binding carries the wire model (what the endpoint understands), the
     // rate snapshot the turn is billed from and the funding decided above.
     const binding = turnBindingFrom(resolved);
+    const searchReserveCents = resolved.funding === 'chatgpt_plan' ? 0 : WEB_SEARCH_MAX_USES * WEB_SEARCH_COST_CENTS;
     const tools: Anthropic.Messages.ToolUnion[] = [
       { type: 'web_search_20250305', name: 'web_search', max_uses: WEB_SEARCH_MAX_USES },
     ];
@@ -350,7 +352,7 @@ export const aiEnrichmentProvider: EnrichmentProvider = {
           requestedMaxOutputTokens: 1024,
           budgetCents: reservedCostCents === undefined
             ? undefined
-            : Math.max(0, reservedCostCents - spentCents - (WEB_SEARCH_MAX_USES * WEB_SEARCH_COST_CENTS)),
+            : Math.max(0, reservedCostCents - spentCents - searchReserveCents),
           calculateCostCents: costEstimator(resolved),
         });
         if (maxTokens === null) throw new EnrichmentBudgetStopError();

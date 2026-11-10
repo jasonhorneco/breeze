@@ -406,7 +406,7 @@ officeAddinTicketRoutes.post(
     }
 
     const resolved = await resolveModel({
-      partnerId: auth.partnerId, orgId: input.orgId, userId: auth.userId, surface: 'office_ticket', maxTokens: 1024,
+      partnerId: auth.partnerId, orgId: input.orgId, userId: auth.userId, surface: 'office_ticket', maxTokens: 1024, planConfigured: true,
     });
     if (!resolved.ok) {
       const answer = oneShotUnavailableAnswer(resolved);

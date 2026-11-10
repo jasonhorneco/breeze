@@ -3,6 +3,7 @@
  * the API and the web. The settings-UI DTOs stay in ./aiModelRegistry.ts (W04).
  */
 import type { EffortLevel, ModelSpeed, OfferingOptions } from '../validators/aiModelOptions';
+import type { AiFundingSource } from '../constants/aiConnectionKinds';
 import type { AiReviewProviderDto } from './aiModelRegistry';
 
 export type AiContinuationReason = 'cross_connection' | 'connection_changed' | 'transcript_too_large' | 'fit_unverifiable';
@@ -27,9 +28,10 @@ export interface AiModelPriceHint {
 export interface AiModelChoiceDto {
   offeringId: string;
   displayName: string;
+  provider?: { id: string; name: string };
   /** The model's context window (max input tokens); null = unknown. */
   contextTokens: number | null;
-  funding: 'platform' | 'partner_key';
+  funding: AiFundingSource;
   priceHint: AiModelPriceHint;
   thinkingMode: 'adaptive' | 'budget' | 'none' | 'unknown';
   /** What the composer may offer for THIS offering on THIS surface's transport. */
@@ -47,7 +49,7 @@ export interface AiModelChoiceDto {
 export interface AiModelChoicesDto {
   /** Discoverable here; selection is only supported on the review alert. */
   reviewProvider?: AiReviewProviderDto;
-  surface: 'chat' | 'ai_agents';
+  surface: 'chat' | 'script_builder' | 'ai_agents';
   /** Chat: false hides the whole menu and the option controls (spec §11). */
   allowUserChoice: boolean;
   defaultOfferingId: string | null;

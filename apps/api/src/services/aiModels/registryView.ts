@@ -75,7 +75,7 @@ export async function buildCatalogSummary(): Promise<AiModelsSnapshotDto['catalo
  * never the tree or the fingerprint. null for every non-gateway offering.
  */
 function verificationDto(o: Offering, conn: PartnerAiConnection | undefined): AiOfferingVerificationDto | null {
-  if (!conn || !isGatewayConnectionKind(conn.kind)) return null;
+  if (conn?.kind !== 'openai_compatible') return null;
   const { state, record } = verifiedGatewayCapabilities(
     o.capabilities,
     endpointFingerprint({ kind: conn.kind, baseUrl: conn.baseUrl, providerConfig: conn.providerConfig ?? null }),
@@ -114,7 +114,7 @@ function offeringDto(
     fastRates: c.optionRates?.['speed:fast'] ?? null,
     priceSource: c.facts.rate?.source ?? null,
     ownPrices: own,
-    pricesEditable: o.source === 'discovered' || o.source === 'manual',
+    pricesEditable: c.funding !== 'chatgpt_plan' && (o.source === 'discovered' || o.source === 'manual'),
     thinkingMode: c.capabilities.thinkingMode,
     supportsTools: c.facts.supportsTools,
     contextTokens: c.limits.maxInputTokens,
@@ -314,7 +314,7 @@ export async function buildPartnerModelsSnapshot(partnerId: string): Promise<AiM
       verifiedAt: c.verifiedAt?.toISOString() ?? null,
       lastDiscoveredAt: c.lastDiscoveredAt?.toISOString() ?? null,
       discoveryError: c.discoveryError,
-      funding: 'partner_key' as const,
+      funding: c.kind === 'chatgpt_plan' ? 'chatgpt_plan' : 'partner_key',
       // Gateway kinds only; the base URL never carries credentials (byoBaseUrlSchema / byoEndpointPolicy refuse them).
       baseUrl: gateway ? c.baseUrl : null,
       ...envStateDtoFields(gateway ? envManagementState(c.providerConfig) : null),
@@ -345,18 +345,23 @@ export async function buildPartnerModelsSnapshot(partnerId: string): Promise<AiM
 export async function buildOrgModelDefaults(input: {
   partnerId: string; orgId: string; canEdit: boolean; canEditReviewer: boolean;
 }): Promise<AiOrgModelDefaultsDto> {
-  const [enabled, partnerRows, orgRows] = await Promise.all([
+  const [enabled, partnerRows, orgRows, connections] = await Promise.all([
     listOfferings(input.partnerId, { enabledOnly: true }),
     listAssignmentRows({ partnerId: input.partnerId }),
     listAssignmentRows({ partnerId: input.partnerId, orgId: input.orgId }),
+    listConnections(input.partnerId),
   ]);
+  const providerNames = new Map(connections.map(connection => [connection.id, connection.name]));
   const offerings: AiOrgModelDefaultsDto['offerings'] = [];
   for (const o of enabled) {
     const c = await loadOfferingCandidate(o.id, input.partnerId);
     if (!c) continue;
+    if (c.funding === 'chatgpt_plan' && c.facts.planOrgId !== input.orgId) continue;
     offerings.push({
       id: o.id,
       displayName: c.displayName,
+      connectionId: c.connectionId,
+      providerName: c.connectionId ? providerNames.get(c.connectionId) : 'Breeze platform',
       funding: c.funding,
       supportsTools: c.facts.supportsTools,
       optionSupport: c.optionSupport,

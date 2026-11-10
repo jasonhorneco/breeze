@@ -512,6 +512,7 @@ aiRoutes.post(
     // Messages API one-shot, so it resolves for that transport's carriage.
     const turn = await resolveSessionTurn({
       sessionId, surface: 'chat', userId: auth.user.id, maxTokens: 1024, transport: 'messages_api',
+      ...(auth.principal?.kind === 'user_session' && !auth.aiOrigin ? { planUserSession: true } : {}),
     });
     if (!turn.ok) {
       const answer = oneShotUnavailableAnswer(turn);

@@ -174,7 +174,9 @@ async function runHelperPreFlight(
   // Funding comes from the resolved offering, before any admission check.
   let model: ResolvedModel;
   try {
-    const turn = await resolveSessionTurn({ sessionId, surface: 'helper', userId: null });
+    const turn = await resolveSessionTurn({
+      sessionId, surface: 'helper', userId: null, planConfigured: clientToolsFromSession(session).length === 0,
+    });
     if (!turn.ok) {
       return { ok: false, error: turn.message, status: turn.reason === 'registry_unavailable' ? 503 : 409, code: turn.reason };
     }
@@ -285,7 +287,9 @@ helperRoutes.post(
     if (!partnerId) return c.json({ error: 'ai_unavailable' }, 503);
     let choice: SessionModelChoice;
     try {
-      choice = await chooseSessionModel({ partnerId, orgId: device.orgId, userId: null, surface: 'helper' });
+      choice = await chooseSessionModel({
+        partnerId, orgId: device.orgId, userId: null, surface: 'helper', planConfigured: !body.clientTools?.length,
+      });
     } catch (error) {
       if (error instanceof LlmUnavailableError || error instanceof LlmNotConfiguredError) {
         return c.json({ error: 'ai_unavailable' }, 503);

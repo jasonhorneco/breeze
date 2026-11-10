@@ -3,7 +3,7 @@
  * them in services/aiModels/registryView.ts and usageQueries.ts; the web reads
  * them unchanged. Never add key material, fingerprints or raw provider config.
  */
-import type { AiConnectionEnvFields, AiConnectionKind } from '../constants/aiConnectionKinds';
+import type { AiConnectionEnvFields, AiConnectionKind, AiFundingSource } from '../constants/aiConnectionKinds';
 import type { AiSurface } from '../constants/aiSurfaces';
 import type { EffortLevel, ModelLifecycle, ModelRates, OfferingOptions, OptionSupport } from '../validators/aiModelOptions';
 import type { AiAssignmentWriteRole, AiUsageGroupBy } from '../validators/aiModelRegistryApi';
@@ -29,7 +29,7 @@ export interface AiConnectionDto extends AiConnectionEnvFields {
   verifiedAt: string | null;
   lastDiscoveredAt: string | null;
   discoveryError: string | null;
-  funding: 'platform' | 'partner_key';
+  funding: AiFundingSource;
   /** openai_compatible only (W06). Never contains credentials. */
   baseUrl: string | null;
 }
@@ -54,7 +54,7 @@ export interface AiOfferingDto {
   displayNameOverride: string | null;
   enabled: boolean;
   lifecycle: ModelLifecycle;
-  funding: 'platform' | 'partner_key';
+  funding: AiFundingSource;
   /** The rate the resolver would bill, per spec §8 precedence; null = unpriced. */
   rates: ModelRates | null;
   fastRates: ModelRates | null;
@@ -144,7 +144,8 @@ export interface AiOrgSurfaceDefaultsDto {
 export interface AiOrgModelDefaultsDto {
   orgId: string;
   /** Enabled offerings of the org's partner (what an override may choose from). */
-  offerings: Array<Pick<AiOfferingDto, 'id' | 'displayName' | 'funding' | 'supportsTools' | 'optionSupport' | 'rates' | 'requiredPermission'>>;
+  offerings: Array<Pick<AiOfferingDto, 'id' | 'displayName' | 'funding' | 'supportsTools' | 'optionSupport' | 'rates' | 'requiredPermission'> &
+    { connectionId?: string | null; providerName?: string }>;
   surfaces: AiOrgSurfaceDefaultsDto[];
   canEdit: boolean;
   canEditReviewer: boolean;

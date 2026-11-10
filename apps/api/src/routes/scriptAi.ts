@@ -105,7 +105,11 @@ scriptAiRoutes.post(
     try {
       const partnerId = await readOrgPartnerId(orgId);
       if (!partnerId) return c.json({ error: 'ai_unavailable' }, 503);
-      choice = await chooseSessionModel({ partnerId, orgId, userId: auth.user.id, surface: 'script_builder' });
+      choice = await chooseSessionModel({
+        partnerId, orgId, userId: auth.user.id, surface: 'script_builder',
+        ...(auth.principal?.kind === 'user_session' && !auth.aiOrigin ? { planUserSession: true } : {}),
+        ...(body.model ? { offeringId: body.model.offeringId, options: body.model.options } : {}),
+      });
     } catch (err) {
       if (err instanceof LlmNotConfiguredError) return c.json(AI_NOT_CONFIGURED_BODY, 503);
       if (err instanceof LlmUnavailableError) return c.json(llmUnavailableBody(err), 503);

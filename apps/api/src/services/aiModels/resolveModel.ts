@@ -44,6 +44,10 @@ export interface ResolveModelInput {
   partnerId: string | null;
   orgId: string | null;
   userId?: string | null;
+  planUserSession?: boolean;
+  /** A trusted surface may use a model saved by the subscription owner in its native assignment. */
+  planConfigured?: boolean;
+  subscriptionOnly?: boolean;
   surface: AiSurface;
   role?: string;
   requested?: { offeringId?: string; options?: Partial<OfferingOptions>; origin?: RequestOrigin };
@@ -177,6 +181,13 @@ function requestedOptions(
 ): OfferingOptions {
   const out: Record<string, unknown> = {};
   for (const key of ['effort', 'thinkingDisplay', 'speed', 'budgetThinking'] as const) {
+    if (key === 'effort' && c.funding === 'chatgpt_plan') {
+      const inherited = fromAssignment?.effort;
+      const effort = fromRequest?.effort ?? (inherited && c.optionSupport.effort.includes(inherited)
+        ? inherited : c.defaultOptions?.effort);
+      if (effort) out.effort = effort;
+      continue;
+    }
     const value = fromRequest?.[key] ?? fromAssignment?.[key] ?? c.defaultOptions?.[key];
     if (value !== undefined) out[key] = value;
   }
@@ -195,6 +206,10 @@ function wireFor(
   maxTokens: number | undefined,
   carriage: TransportCarriage,
 ): WireParams {
+  if (c.funding === 'chatgpt_plan') {
+    const effort = requested.effort;
+    return { betas: [], applied: effort ? { effort } : {} };
+  }
   // W05: an option is never applied — or reported as applied — unless the
   // dispatch transport will actually send it.
   const carried: OfferingOptions = carriage.budgetThinking ? requested : { ...requested, budgetThinking: undefined };
@@ -272,11 +287,18 @@ async function finalize(
   // A stored choice's options survive a fallback: clamping to the fallback
   // model's support drops anything it cannot honour.
   const requested = requestedOptions(c, input.requested?.options, assignmentOptions);
+  if (c.funding === 'chatgpt_plan' && (requested.effort
+    ? !c.optionSupport.effort.includes(requested.effort) : c.optionSupport.effort.length > 0)) {
+    return unavailable('not_permitted', c.offeringId, c.displayName);
+  }
   const wireParams = wireFor(c, requested, input.maxTokens, carriage);
   const primaryRate = rateFor(c, wireParams.applied);
-  const refusalFallback = input.partnerId
+  const refusalFallback = input.partnerId && c.funding !== 'chatgpt_plan'
     ? await refusalFallbackFor(c, input.partnerId, ctx, input.maxTokens, carriage, transport, primaryRate)
     : undefined;
+  const connection = 'credential' in c.connection && c.connection.config.kind === 'chatgpt_plan'
+    ? { ...c.connection, config: { ...c.connection.config, effort: requested.effort ?? null, catalogSearch: input.surface === 'catalog_enrichment' } }
+    : c.connection;
   return {
     ok: true,
     surface: input.surface,
@@ -285,7 +307,7 @@ async function finalize(
     partnerId: input.partnerId,
     orgId: input.orgId,
     offering: { id: c.offeringId, displayName: c.displayName },
-    connection: c.connection,
+    connection,
     funding: c.funding,
     logicalModel: c.logicalModel,
     wireModel: c.wireModel,
@@ -315,6 +337,7 @@ export async function eligibilityContextFor(input: {
   partnerId: string;
   orgId: string | null;
   userId?: string | null;
+  planUserSession?: boolean;
   surface: AiSurface;
   transport: DispatchTransport;
 }): Promise<EligibilityContext> {
@@ -334,6 +357,9 @@ export async function eligibilityContextFor(input: {
     geoCarriable: transportCarries(input.transport).inferenceGeo,
     userInitiated,
     userHoldsPermission,
+    ...(input.planUserSession && input.userId && input.orgId ? {
+      planPrincipal: { userId: input.userId, orgId: input.orgId },
+    } : {}),
   };
 }
 
@@ -402,7 +428,7 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
   ));
 
   const ctx = await eligibilityContextFor({
-    partnerId, orgId: input.orgId, userId: input.userId, surface: input.surface, transport,
+    partnerId, orgId: input.orgId, userId: input.userId, planUserSession: input.planUserSession, surface: input.surface, transport,
   });
 
   const origin: RequestOrigin = input.requested?.origin ?? 'user';
@@ -424,13 +450,17 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
     : input;
   const requestedId = input.requested?.offeringId;
   const defaultId = assignment.defaultOfferingId;
+  if (input.planConfigured && input.orgId && (!requestedId || origin === 'policy' || origin === 'session')) {
+    ctx.planConfiguredOrgId = input.orgId;
+  }
   const permitted = (id: string) => isPermitted(assignment.permitted, id);
   const excluded = new Set(input.excludeOfferingIds ?? []);
   const fallbackList = assignment.fallbackOfferingIds;
   const dispatchOrigin = input.failoverOrigin ?? null;
+  if (dispatchOrigin?.funding === 'chatgpt_plan') return unavailable('connection_unavailable', dispatchOrigin.offeringId);
   /** F1 + D5 against the dispatch origin (Codex review 4); always true outside a re-resolution. */
   const allowedFromOrigin = (c: LoadedCandidate) => dispatchOrigin === null || (
-    (c.funding === dispatchOrigin.funding || assignment.fallbackMayCrossFunding)
+    c.funding !== 'chatgpt_plan' && (c.funding === dispatchOrigin.funding || assignment.fallbackMayCrossFunding)
     && (!input.sameConnectionOnly || c.connectionId === dispatchOrigin.connectionId));
   // One MGET for every id this call could serve, and none without a list: a
   // cooldown only matters when there is something healthier to prefer.
@@ -448,7 +478,7 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
         }
       : null);
     return finalize(c, effective, role, assignment.options, ctx, fellBack || recorded !== null, transport, recorded,
-      fallbackList.filter((id) => id !== c.offeringId && id !== primaryId && !excluded.has(id)));
+      c.funding === 'chatgpt_plan' ? [] : fallbackList.filter((id) => id !== c.offeringId && id !== primaryId && !excluded.has(id)));
   };
 
   /**
@@ -466,6 +496,7 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
     passedOver: number,
     tried: ReadonlySet<string>,
   ): Promise<ResolveModelResult | null> => {
+    if (primary?.funding === 'chatgpt_plan' || input.subscriptionOnly) return null;
     let skipped = passedOver;
     let firstCooling: { c: LoadedCandidate; hop: number } | null = null;
     const reference = dispatchOrigin ?? (primary ? { funding: primary.funding, connectionId: primary.connectionId } : null);
@@ -476,7 +507,7 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
       if (id === primaryId || tried.has(id)) continue;
       if (excluded.has(id) || !permitted(id)) { skipped++; continue; }
       const c = await loadOfferingCandidate(id, partnerId);
-      if (!c || checkEligibility(c.facts, ctx) !== null) { skipped++; continue; }
+      if (!c || c.funding === 'chatgpt_plan' || checkEligibility(c.facts, ctx) !== null) { skipped++; continue; }
       const crossesFunding = reference === null || c.funding !== reference.funding;
       if (crossesFunding && !assignment.fallbackMayCrossFunding) { skipped++; continue; }
       if (input.sameConnectionOnly && (reference === null || c.connectionId !== reference.connectionId)) { skipped++; continue; }
@@ -505,12 +536,15 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
     storedReason: ResolveFailureReason,
     cause: FailoverCause,
   ): Promise<ResolveModelResult> => {
+    if (stored?.funding === 'chatgpt_plan' || input.subscriptionOnly) {
+      return unavailable(storedReason, requestedId ?? null, stored?.displayName);
+    }
     const tried = new Set<string>();
     if (fallbackList.length === 0 && stored && defaultId && defaultId !== requestedId && !excluded.has(defaultId)) {
       tried.add(defaultId);
       const fb = await loadOfferingCandidate(defaultId, partnerId);
       const sameRoute = fb !== null && fb.connectionId === stored.connectionId && fb.funding === stored.funding;
-      if (fb && sameRoute && allowedFromOrigin(fb) && checkEligibility(fb.facts, ctx) === null) {
+      if (fb && fb.funding !== 'chatgpt_plan' && sameRoute && allowedFromOrigin(fb) && checkEligibility(fb.facts, ctx) === null) {
         return serve(fb, true, { fromOfferingId: requestedId ?? null, hop: 1, cause }, requestedId ?? null);
       }
     }
@@ -529,6 +563,7 @@ export async function resolveModel(input: ResolveModelInput): Promise<ResolveMod
   const primaryId = requestedId ?? defaultId;
   if (!primaryId) return unavailable('no_eligible_model', null);
   const primary = await loadOfferingCandidate(primaryId, partnerId);
+  if (input.subscriptionOnly && primary?.funding !== 'chatgpt_plan') return unavailable('not_permitted', primaryId);
   const reason: ResolveFailureReason | null = primary ? checkEligibility(primary.facts, ctx) : 'not_permitted';
   // A fresh user pick never fails over (W03's strict session creation, W05's composer choice).
   const freshUserPick = origin === 'user' && requestedId !== undefined;

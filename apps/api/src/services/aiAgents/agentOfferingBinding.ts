@@ -25,6 +25,7 @@ import { AgentModelNotAllowedError } from './agentModelErrors';
 /** The human making the policy write; their permissions gate a premium offering. */
 export interface AgentPolicyWriter {
   userId: string;
+  planUserSession?: boolean;
 }
 
 // One message for "missing", "another partner's" and "ownership mismatch":
@@ -66,6 +67,7 @@ export async function bindAgentOffering(
     partnerId,
     orgId: owner.orgId,
     userId: writer.userId || null,
+    planUserSession: writer.planUserSession,
     surface: 'ai_agents',
     transport: defaultTransport('ai_agents'),
   });

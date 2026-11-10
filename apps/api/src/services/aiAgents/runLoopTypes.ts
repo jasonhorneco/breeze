@@ -1,4 +1,4 @@
-import type { AnalysisOutcome, AssessmentOutcome, RemediationTriggerKind, ResearchOutcome } from '@breeze/shared';
+import type { AiFundingSource, AnalysisOutcome, AssessmentOutcome, RemediationTriggerKind, ResearchOutcome } from '@breeze/shared';
 import type { ResearchRunContext } from './researchContext';
 import type { AssessmentRunContext } from '../wisp/assessmentTypes';
 import type { RunProvenFixes } from '../fixMemory/runMemory';
@@ -421,7 +421,7 @@ export interface RunRow {
    * loop re-resolves exactly it). Both null on a run admitted before W03;
    * optional so a fixture that predates them stays a valid row.
    */
-  fundingSource?: 'platform' | 'partner_key' | null;
+  fundingSource?: AiFundingSource | null;
   admittedOfferingId?: string | null;
   /**
    * AI model registry W09 (#7607) — the failover hop the run last recorded

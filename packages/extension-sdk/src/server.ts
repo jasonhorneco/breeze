@@ -94,7 +94,7 @@ export interface ExtensionAiInvokeInput {
 export interface ExtensionAiInvokeResult {
   text: string; // concatenated text blocks of the response
   model: string;
-  billingSource: 'platform' | 'partner_key';
+  billingSource: 'platform' | 'partner_key' | 'chatgpt_plan';
   usage: { inputTokens: number; outputTokens: number };
 }
 

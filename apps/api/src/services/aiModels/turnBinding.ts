@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import {
   AI_DISPATCHABLE_CONNECTION_KINDS,
+  AI_FUNDING_SOURCES,
   AI_SURFACES,
   PROMPT_PROFILES,
   offeringOptionsSchema,
@@ -87,9 +88,10 @@ export function stableJson(value: unknown): string {
 }
 
 /** Everything the SDK subprocess / request body is built from, minus the price. */
-function wireFingerprint(w: WireParams, fallbackWireModel: string | null): string {
+function wireFingerprint(w: WireParams, fallbackWireModel: string | null, planEffort?: OfferingOptions['effort']): string {
   const { applied: _applied, ...wire } = w;
-  return createHash('sha256').update(stableJson({ wire, fallbackWireModel })).digest('hex').slice(0, 24);
+  return createHash('sha256').update(stableJson({ wire, fallbackWireModel, ...(planEffort ? { planEffort } : {}) }))
+    .digest('hex').slice(0, 24);
 }
 
 export function turnBindingFrom(r: ResolvedModel): TurnBinding {
@@ -109,7 +111,8 @@ export function turnBindingFrom(r: ResolvedModel): TurnBinding {
     options: r.options,
     thinkingMode: r.thinking,
     inferenceGeo: r.inferenceGeo,
-    wireFingerprint: wireFingerprint(r.wireParams, r.refusalFallback?.wireModel ?? null),
+    wireFingerprint: wireFingerprint(r.wireParams, r.refusalFallback?.wireModel ?? null,
+      r.funding === 'chatgpt_plan' ? r.options.effort : undefined),
     rateSnapshot: r.rateSnapshot,
     refusalFallback: r.refusalFallback
       ? {
@@ -163,7 +166,7 @@ const turnBindingSchema = z.object({
   connectionKind: z.enum(AI_DISPATCHABLE_CONNECTION_KINDS),
   configVersion: z.number().int().nullable(),
   catalogRevisionId: z.string().nullable(),
-  funding: z.enum(['platform', 'partner_key']),
+  funding: z.enum(AI_FUNDING_SOURCES),
   logicalModel: z.string().min(1),
   wireModel: z.string().min(1),
   options: offeringOptionsSchema,

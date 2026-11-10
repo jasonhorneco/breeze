@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoadedCandidate } from './candidateLoader';
+import { CONFIGURABLE_AI_SURFACES } from '@breeze/shared';
 
 const m = vi.hoisted(() => ({
   getEffectiveAssignment: vi.fn(),
@@ -151,6 +152,67 @@ describe('resolveModel — registry cutover gate (Task 6A)', () => {
   it('a cut-over partner resolves normally', async () => {
     expect(await resolveModel(BASE)).toMatchObject({ ok: true });
     expect(m.ensurePartnerCutover).toHaveBeenCalledWith('p1');
+  });
+});
+
+describe('resolveModel — ChatGPT plan choices', () => {
+  beforeEach(() => {
+    candidates.alt = cand('alt', {
+      funding: 'chatgpt_plan',
+      connectionId: 'plan-connection',
+      connection: {
+        id: 'plan-connection', kind: 'chatgpt_plan', credential: { secret: 'worker-secret' },
+        config: {
+          source: 'gateway', kind: 'chatgpt_plan', baseUrl: 'https://fixture.invalid/',
+          connectionId: 'plan-connection', partnerId: 'p1', configVersion: 1,
+        },
+      },
+      optionSupport: { effort: ['low', 'ultra'], thinkingDisplay: [], speed: ['standard'], inferenceGeo: [] },
+      defaultOptions: { effort: 'low' },
+    }, {
+      connection: { kind: 'chatgpt_plan', status: 'active', keyUsable: true },
+      planOwnerId: 'u1', planOrgId: 'o1',
+    });
+  });
+
+  it('binds the selected effort on the native gateway without a fallback', async () => {
+    const result = await resolveModel({
+      ...BASE, userId: 'u1', planUserSession: true, requested: { offeringId: 'alt', options: { effort: 'ultra' } },
+    });
+    expect(result).toMatchObject({
+      ok: true, funding: 'chatgpt_plan', options: { effort: 'ultra' },
+      connection: { config: { kind: 'chatgpt_plan', effort: 'ultra' } }, failoverRemaining: [],
+    });
+  });
+
+  it('refuses a wrong owner, a service credential, a wrong organization and an invalid effort', async () => {
+    const cases = [
+      { userId: 'u2', planUserSession: true },
+      { userId: 'u1' },
+      { userId: 'u1', planUserSession: true, orgId: 'o2' },
+      { userId: 'u1', planUserSession: true, requested: { offeringId: 'alt', options: { effort: 'high' as const } } },
+    ];
+    for (const overrides of cases) {
+      expect(await resolveModel({ ...BASE, requested: { offeringId: 'alt' }, ...overrides })).toMatchObject({ ok: false });
+    }
+  });
+
+  it.each(CONFIGURABLE_AI_SURFACES)('resolves an explicitly configured ChatGPT plan model for %s', async surface => {
+    m.getEffectiveAssignment.mockResolvedValue({ ...ASSIGNMENT, surface, defaultOfferingId: 'alt', options: { effort: 'ultra' } });
+    expect(await resolveModel({ ...BASE, surface, planConfigured: true })).toMatchObject({
+      ok: true, funding: 'chatgpt_plan', options: { effort: 'ultra' }, failoverRemaining: [],
+    });
+    expect(await resolveModel({ ...BASE, surface })).toMatchObject({ ok: false, reason: 'not_permitted' });
+  });
+
+  it('keeps a disconnected subscription session from falling through to a different provider', async () => {
+    m.getEffectiveAssignment.mockResolvedValue({ ...ASSIGNMENT, fallbackOfferingIds: ['def'], fallbackMayCrossFunding: true });
+    candidates.alt = null;
+    expect(await resolveModel({
+      ...BASE, userId: 'u1', planUserSession: true, subscriptionOnly: true,
+      requested: { offeringId: 'alt', origin: 'session' },
+    })).toMatchObject({ ok: false });
+    expect(m.loadOfferingCandidate).not.toHaveBeenCalledWith('def', 'p1');
   });
 });
 

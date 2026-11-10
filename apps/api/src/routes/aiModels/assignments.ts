@@ -16,7 +16,10 @@ aiModelAssignmentRoutes.put('/', ...partnerWrite, zValidator('json', partnerAssi
     return c.json(APPROVALS_DECIDE_REQUIRED, 403);
   }
   return registryWrite(c, partnerId, async () => {
-    const rows = await putPartnerAssignments({ partnerId, rows: assignments });
+    const auth = c.get('auth');
+    const rows = await putPartnerAssignments({ partnerId, rows: assignments,
+      ...(auth?.principal?.kind === 'user_session' && !auth.aiOrigin ? { planWriterId: auth.user.id } : {}),
+    });
     writeRouteAudit(c, {
       orgId: null,
       action: 'ai_models.assignments.updated',

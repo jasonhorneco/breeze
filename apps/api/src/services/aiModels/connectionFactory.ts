@@ -302,6 +302,7 @@ export function anthropicClientFor(resolved: ResolvedModel, caller: LlmClientCal
     if (!orgId) throw new LlmUnavailableError('This AI model needs an organization context on this surface.');
     return createAnthropicClient({
       apiKey: GATEWAY_PLACEHOLDER_KEY,
+      ...(resolved.funding === 'chatgpt_plan' ? { maxRetries: 0 } : {}),
       target: {
         kind: 'gateway',
         dialect: 'anthropic',
@@ -455,14 +456,7 @@ export interface DispatchFacts {
 
 /** Display/audit URL of a gateway connection's upstream. W07 adds cloud arms. */
 export function gatewayUpstreamUrl(config: GatewayConnectionConfig): string {
-  switch (config.kind) {
-    case 'openai_compatible':
-      return config.baseUrl;
-    default: {
-      const never: never = config.kind;
-      throw new Error(`Unknown gateway connection kind ${String(never)}`);
-    }
-  }
+  return config.baseUrl;
 }
 
 export function describeDispatch(resolved: ResolvedModel): DispatchFacts {

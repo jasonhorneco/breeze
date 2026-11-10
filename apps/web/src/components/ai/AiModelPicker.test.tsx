@@ -27,6 +27,27 @@ function setChoices(c: AiModelChoicesDto | null) {
 beforeEach(() => useAiModelPickerStore.getState().reset());
 
 describe('AiModelPicker (spec §11)', () => {
+  it('changes models and supported efforts when OpenAI Codex is the selected provider', () => {
+    const local = { ...base.choices[0]!, provider: { id: 'local', name: 'Existing provider' } };
+    const luna = {
+      ...local, offeringId: 'luna', displayName: 'GPT-6-Luna', funding: 'chatgpt_plan' as const,
+      provider: { id: 'codex', name: 'OpenAI Codex' },
+    };
+    const sol = {
+      ...luna, offeringId: 'sol', displayName: 'GPT-6.1-Sol',
+      options: { ...luna.options, effort: ['low', 'ultra'] as Array<'low' | 'ultra'> },
+      defaults: { effort: 'low' as const },
+    };
+    setChoices({ ...base, choices: [local, luna, sol] });
+    render(<AiModelPicker />);
+    fireEvent.change(screen.getByTestId('ai-model-provider'), { target: { value: 'codex' } });
+    fireEvent.click(screen.getByTestId('ai-model-picker-button'));
+    expect(screen.queryByTestId('ai-model-option-def')).toBeNull();
+    fireEvent.click(screen.getByTestId('ai-model-option-sol'));
+    fireEvent.change(screen.getByTestId('ai-model-effort'), { target: { value: 'ultra' } });
+    expect(useAiModelPickerStore.getState().pendingChoice()).toEqual({ offeringId: 'sol', options: { effort: 'ultra' } });
+  });
+
   it('lists each offering with name, context size and price hint', () => {
     setChoices(base);
     render(<AiModelPicker />);

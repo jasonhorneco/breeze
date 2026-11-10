@@ -11,6 +11,7 @@ import { fetchWithAuth } from './auth';
 import { extractApiError } from '@/lib/apiError';
 import { i18n } from '@/lib/i18n';
 import type {
+  AiModelChoice,
   AiStreamEvent,
   ScriptBuilderContext,
   ScriptLanguage,
@@ -93,6 +94,8 @@ interface PendingApproval {
 interface ScriptAiState {
   // State
   sessionId: string | null;
+  modelSelection: AiModelChoice | null;
+  setModelSelection: (choice: AiModelChoice | null) => void;
   messages: ScriptAiMessage[];
   isStreaming: boolean;
   isLoading: boolean;
@@ -185,6 +188,7 @@ export function buildEditorContext(bridge: ScriptFormBridge | null): ScriptBuild
 export const useScriptAiStore = create<ScriptAiState>()(
   (set, get) => ({
     sessionId: null,
+    modelSelection: null,
     messages: [],
     isStreaming: false,
     isLoading: false,
@@ -203,7 +207,8 @@ export const useScriptAiStore = create<ScriptAiState>()(
     // Panel visibility
     togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
     openPanel: () => set({ panelOpen: true }),
-    closePanel: () => set({ panelOpen: false }),
+    closePanel: () => set({ panelOpen: false, modelSelection: null }),
+    setModelSelection: (choice) => set({ modelSelection: choice }),
 
     // Bridge
     setBridge: (bridge) => set({ _bridge: bridge }),
@@ -237,7 +242,7 @@ export const useScriptAiStore = create<ScriptAiState>()(
       try {
         const res = await fetchWithAuth('/ai/script-builder/sessions', {
           method: 'POST',
-          body: JSON.stringify({ context }),
+          body: JSON.stringify({ context, model: get().modelSelection ?? undefined }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => null);

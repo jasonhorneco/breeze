@@ -291,7 +291,10 @@ function scalarPolicyColumns(input: ScalarPolicyInput): Partial<typeof aiAgents.
  */
 async function bindPolicyOffering(owner: AgentOwner, offeringId: string | null, auth: AuthContext): Promise<AgentModelBinding> {
   const { bindAgentOffering } = await import('./agentOfferingBinding');
-  return bindAgentOffering(owner, offeringId, { userId: auth.user.id });
+  return bindAgentOffering(owner, offeringId, {
+    userId: auth.user.id,
+    ...(auth.principal?.kind === 'user_session' && !auth.aiOrigin ? { planUserSession: true } : {}),
+  });
 }
 
 /**

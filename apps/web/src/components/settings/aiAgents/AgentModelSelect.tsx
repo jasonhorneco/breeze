@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AiModelChoicesDto } from '@breeze/shared';
 import { fetchWithAuth } from '@/stores/auth';
 import { formatCentsPerM, formatContextTokens } from '@/components/ai/modelPickerFormat';
+import ModelProviderSelect from '@/components/ai/ModelProviderSelect';
 
 /**
  * W05 (#7603): the agent policy model (spec §5.6) — the `ai_agents` permitted
@@ -47,10 +48,16 @@ export default function AgentModelSelect({ orgId, value, onChange, disabled }: {
   const defaultName = data.choices.find((c) => c.offeringId === data.defaultOfferingId)?.displayName
     ?? t('aiAgentsPage.fields.modelDefaultUnknown');
   const known = new Set(data.choices.map((c) => c.offeringId));
+  const providers = data.choices.flatMap(choice => choice.provider && !choice.disabled
+    ? [{ id: choice.offeringId, provider: choice.provider.id, label: choice.provider.name }] : []);
+  const selected = data.choices.find(choice => choice.offeringId === value);
+  const visibleModels = selected?.provider
+    ? data.choices.filter(choice => choice.provider?.id === selected.provider?.id) : data.choices;
 
   const label = (c: AiModelChoicesDto['choices'][number]): string => {
     const ctx = formatContextTokens(c.contextTokens);
-    const price = `${formatCentsPerM(c.priceHint.inputCentsPerM)}/${formatCentsPerM(c.priceHint.outputCentsPerM)}`;
+    const price = c.funding === 'chatgpt_plan' ? 'ChatGPT subscription'
+      : `${formatCentsPerM(c.priceHint.inputCentsPerM)}/${formatCentsPerM(c.priceHint.outputCentsPerM)}`;
     const detail = ctx ? `${ctx} · ${price}` : price;
     const gate = c.disabled
       ? ` — ${c.disabled.roleNames.length
@@ -61,6 +68,9 @@ export default function AgentModelSelect({ orgId, value, onChange, disabled }: {
   };
 
   return (
+    <div className="space-y-2 md:col-span-2">
+    <ModelProviderSelect choices={providers} selected={value ?? ''} onSelect={onChange}
+      testId="ai-agent-model-provider" disabled={disabled} />
     <label className="flex flex-col gap-1 text-sm md:col-span-2">
       <span className="font-medium">{t('aiAgentsPage.fields.model')}</span>
       <select
@@ -73,7 +83,7 @@ export default function AgentModelSelect({ orgId, value, onChange, disabled }: {
         <option value="" data-testid="ai-agent-model-option-default">
           {t('aiAgentsPage.fields.modelDefault', { model: defaultName })}
         </option>
-        {data.choices.map((c) => (
+        {visibleModels.map((c) => (
           <option
             key={c.offeringId}
             value={c.offeringId}
@@ -96,5 +106,6 @@ export default function AgentModelSelect({ orgId, value, onChange, disabled }: {
       </select>
       <span className="text-xs text-muted-foreground">{t('aiAgentsPage.fields.modelHint')}</span>
     </label>
+    </div>
   );
 }

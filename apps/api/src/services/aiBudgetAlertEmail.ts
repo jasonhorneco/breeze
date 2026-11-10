@@ -1,4 +1,5 @@
 import { escapeHtml, renderButton, renderLayout, renderParagraph } from './emailLayout';
+import type { AiFundingSource } from '@breeze/shared';
 
 export interface AiBudgetAlertContext {
   orgName: string;
@@ -7,7 +8,7 @@ export interface AiBudgetAlertContext {
   thresholdPct: number;
   capCents: number;
   usedCents: number;
-  billingSource: 'platform' | 'partner_key';
+  billingSource: AiFundingSource;
   usagePath: string;
   appBaseUrl: string;
 }
@@ -28,6 +29,7 @@ export function shouldEmail(period: 'daily' | 'monthly', thresholdPct: number): 
 }
 
 function billedTo(source: AiBudgetAlertContext['billingSource']): string {
+  if (source === 'chatgpt_plan') return 'Uses your ChatGPT subscription.';
   return source === 'partner_key' ? 'Billed to your Anthropic API key.' : 'Billed to Breeze AI credits.';
 }
 

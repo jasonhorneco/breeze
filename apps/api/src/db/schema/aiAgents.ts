@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import type { AiFundingSource } from '@breeze/shared';
 import {
   bigint,
   boolean,
@@ -228,7 +229,7 @@ export const aiAgentRuns = pgTable('ai_agent_runs', {
   // other profile. Read DEFENSIVELY (jsonb has no compile-time shape).
   stagedInputs: jsonb('staged_inputs').$type<AiAgentRunStagedInputs>(),
   /** AI model registry W03 (#7601): funding of the offering resolved at admission. NULL = admitted before W03. */
-  fundingSource: text('funding_source').$type<'platform' | 'partner_key'>(),
+  fundingSource: text('funding_source').$type<AiFundingSource>(),
   /** W03 (review finding 6): the offering admission resolved; the run dispatches this one or is blocked. No FK (provenance id). */
   admittedOfferingId: uuid('admitted_offering_id'),
   /** W09 (#7607): the offering that served the run's model tokens when it was a failover hop. */

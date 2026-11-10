@@ -24,6 +24,8 @@ export async function resolveSessionTurn(input: {
   sessionId: string;
   surface: AiSurface;
   userId: string | null;
+  planUserSession?: boolean;
+  planConfigured?: boolean;
   maxTokens?: number;
   transport?: DispatchTransport;
   /** W05: the composer's choice on this message (a fresh USER request). */
@@ -63,6 +65,9 @@ export async function resolveSessionTurn(input: {
     partnerId,
     orgId: row.orgId,
     userId: input.userId,
+    planUserSession: input.planUserSession,
+    planConfigured: input.planConfigured,
+    subscriptionOnly: !input.choice && row.billingSource === 'chatgpt_plan',
     surface: input.surface,
     ...(requested ? { requested } : {}),
     ...(input.maxTokens !== undefined ? { maxTokens: input.maxTokens } : {}),
@@ -102,6 +107,8 @@ export async function chooseSessionModel(input: {
   partnerId: string;
   orgId: string;
   userId: string | null;
+  planUserSession?: boolean;
+  planConfigured?: boolean;
   surface: AiSurface;
   offeringId?: string;
   options?: Partial<OfferingOptions>;
@@ -111,7 +118,8 @@ export async function chooseSessionModel(input: {
     ? { ...(offeringId ? { offeringId } : {}), ...(input.options ? { options: input.options } : {}), origin: 'user' as const }
     : undefined;
   const r = await resolveModel({
-    partnerId: input.partnerId, orgId: input.orgId, userId: input.userId, surface: input.surface,
+    partnerId: input.partnerId, orgId: input.orgId, userId: input.userId, planUserSession: input.planUserSession,
+    planConfigured: input.planConfigured, surface: input.surface,
     ...(requested ? { requested } : {}),
   });
   if (!r.ok) {

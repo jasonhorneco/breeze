@@ -6,7 +6,7 @@ import { devices } from './devices';
 import { portalUsers } from './portal';
 import { actionIntents } from './actionIntents';
 import { partnerAiModels } from './aiModelRegistry';
-import type { AiTurnModel } from '@breeze/shared';
+import { AI_FUNDING_SOURCES, type AiTurnModel } from '@breeze/shared';
 
 // ============================================
 // Enums
@@ -43,7 +43,7 @@ export const aiSessions = pgTable('ai_sessions', {
   // No default (W03 #7601): every insert names its model, a provenance
   // snapshot of the resolved offering (routing reads offering_id).
   model: varchar('model', { length: 100 }).notNull(),
-  billingSource: text('billing_source', { enum: ['platform', 'partner_key'] }).notNull().default('platform'),
+  billingSource: text('billing_source', { enum: AI_FUNDING_SOURCES }).notNull().default('platform'),
   catalogEntryId: uuid('catalog_entry_id'),
   catalogRevisionId: uuid('catalog_revision_id'),
   systemPrompt: text('system_prompt'),
@@ -223,7 +223,7 @@ export const aiCostUsage = pgTable('ai_cost_usage', {
   messageCount: integer('message_count').notNull().default(0),
   toolExecutionCount: integer('tool_execution_count').notNull().default(0),
   // Most-recent-writer label, not a per-source cost split; deductions are decided per turn, never from this column.
-  billingSource: text('billing_source', { enum: ['platform', 'partner_key'] }).notNull().default('platform'),
+  billingSource: text('billing_source', { enum: AI_FUNDING_SOURCES }).notNull().default('platform'),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 }, (table) => ({
   orgPeriodIdx: uniqueIndex('ai_cost_usage_org_period_idx').on(table.orgId, table.period, table.periodKey)
@@ -272,7 +272,7 @@ export const aiBudgetReservations = pgTable('ai_budget_reservations', {
   orgId: uuid('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   idempotencyKey: varchar('idempotency_key', { length: 200 }).notNull(),
   sessionId: uuid('session_id'),
-  billingSource: text('billing_source', { enum: ['platform', 'partner_key'] }).notNull(),
+  billingSource: text('billing_source', { enum: AI_FUNDING_SOURCES }).notNull(),
   // #5557: which cap this hold was admitted against. 'technician' is every
   // operator-facing surface; 'client' is the Office add-in, which also carries
   // the client_ai_org_policies sub-cap. The ORG cap stays global (settled
@@ -387,7 +387,7 @@ export const aiBudgetAlertEvents = pgTable('ai_budget_alert_events', {
   thresholdPct: smallint('threshold_pct').notNull(),
   capCents: integer('cap_cents').notNull(),
   usedCents: integer('used_cents').notNull(),
-  billingSource: text('billing_source', { enum: ['platform', 'partner_key'] }).notNull(),
+  billingSource: text('billing_source', { enum: AI_FUNDING_SOURCES }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
   deliveryAttempts: integer('delivery_attempts').notNull().default(0),

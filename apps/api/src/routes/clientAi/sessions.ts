@@ -201,7 +201,7 @@ async function ensureActiveClientSession(
     : await getRemainingClientBudgetUsd(policy);
   const resolved = turnModel ?? await (async () => {
     // Portal-user initiated: no Breeze users.id, so no permission gate.
-    const turn = await resolveSessionTurn({ sessionId: sessionRow.id, surface: 'office_chat', userId: null });
+    const turn = await resolveSessionTurn({ sessionId: sessionRow.id, surface: 'office_chat', userId: null, planConfigured: true });
     if (!turn.ok) throw new LlmUnavailableError(turn.message);
     return turn;
   })();
@@ -312,7 +312,7 @@ clientAiSessionRoutes.post('/', async (c) => {
   if (!partnerId) return c.json({ error: 'ai_unavailable' }, 503);
   let choice: SessionModelChoice;
   try {
-    choice = await chooseSessionModel({ partnerId, orgId: auth.orgId, userId: null, surface: 'office_chat' });
+    choice = await chooseSessionModel({ partnerId, orgId: auth.orgId, userId: null, surface: 'office_chat', planConfigured: true });
   } catch (err) {
     if (err instanceof LlmUnavailableError || err instanceof LlmNotConfiguredError) {
       return c.json({ error: 'ai_unavailable' }, 503);
@@ -631,7 +631,7 @@ clientAiSessionRoutes.post(
       // reservation. Funding is the resolved offering's.
       let model: ResolvedModel;
       try {
-        const turn = await resolveSessionTurn({ sessionId, surface: 'office_chat', userId: null });
+        const turn = await resolveSessionTurn({ sessionId, surface: 'office_chat', userId: null, planConfigured: true });
         if (!turn.ok) {
           return respond(c.json({ error: turn.message, code: turn.reason, recoverable: true }, turn.reason === 'registry_unavailable' ? 503 : 409));
         }

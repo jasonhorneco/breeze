@@ -28,6 +28,7 @@ import {
   updateGatewayConnection,
 } from '../../services/aiModels/gatewayConnections';
 import { RegistryWriteError } from '../../services/aiModels/registryWriteErrors';
+import { refreshChatGptPlanCatalog } from '../../services/aiModels/planRegistry';
 import { isLlmProviderCatalogEnabled } from '../../services/llm/llmConfigResolver';
 import { captureException } from '../../services/sentry';
 import {
@@ -50,7 +51,7 @@ const MANAGED_BY_ENV = 'This connection is managed by the MCP_LLM_* environment 
 /** A live gateway-kind connection of this partner; anything else is 404 (anthropicConnectionWrites owns the Anthropic kinds). */
 async function ownGatewayConnection(partnerId: string, id: string): Promise<OwnedConnection> {
   const conn = await ownConnection(partnerId, id);
-  if (!isGatewayConnectionKind(conn.kind)) throw new RegistryWriteError(NOT_FOUND, 'not_found', 404);
+  if (conn.kind !== 'openai_compatible') throw new RegistryWriteError(NOT_FOUND, 'not_found', 404);
   return conn;
 }
 
@@ -266,6 +267,16 @@ aiModelConnectionRoutes.post('/:id/refresh', ...partnerWrite, zValidator('param'
   const { partnerId } = requirePartnerWide(c);
   return registryWrite(c, partnerId, async () => {
     const conn = await ownConnection(partnerId, c.req.valid('param').id);
+    if (conn.kind === 'chatgpt_plan') {
+      const auth = c.get('auth');
+      if (auth?.principal?.kind !== 'user_session' || auth.aiOrigin || auth.user.id !== conn.connectedBy) {
+        return c.json({ error: 'The ChatGPT connection owner must refresh its models.' }, 403);
+      }
+      try { await refreshChatGptPlanCatalog(conn); }
+      catch { return c.json({ error: 'Could not refresh the ChatGPT account catalog.' }, 503); }
+      audit(c, partnerId, 'refresh_requested', { connectionId: conn.id, kind: conn.kind });
+      return c.json({ queued: false, connectionId: conn.id });
+    }
     const failed = await queueConnectionSync(c, conn.id);
     if (failed) return failed;
     // A gateway connection's discovery is partner-level egress (no org, so no

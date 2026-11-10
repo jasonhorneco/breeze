@@ -226,6 +226,7 @@ import { refreshPinnedBuiltinPackages } from './services/builtinDeploymentPackag
 import { sealUnsealedSettingsSecrets } from './services/settingsSecretBackfill';
 import { reportableCutoverError } from './services/aiModels/registryCutover';
 import { runEnvOpenAiBootstrapAtBoot } from './services/aiModels/envOpenAiBootstrap';
+import { registerChatGptPlanAtBoot } from './services/aiModels/planRegistry';
 import { registerGatewayConnectionCheck } from './services/aiModels/gatewayConnectionState';
 import { sealUnsealedBackupProviderConfigs } from './services/backupProviderConfigBackfill';
 import { hashLegacyInstallerBootstrapTokens } from './services/installerBootstrapTokenHashBackfill';
@@ -2204,6 +2205,9 @@ async function bootstrap(): Promise<void> {
       console.error('[startup] MCP_LLM_* env bootstrap failed:', safeErrorMessage(err));
       captureException(reportableCutoverError(err), undefined, { area: 'ai_env_openai_bootstrap' });
     });
+  void registerChatGptPlanAtBoot().catch(() => {
+    console.error('[startup] ChatGPT plan registry setup failed');
+  });
 
   // Storage keys that S3 backup destinations used before backups were written
   // only through storage sessions are recorded once, so each stays listed

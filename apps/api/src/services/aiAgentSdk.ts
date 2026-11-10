@@ -586,7 +586,11 @@ async function loadPreFlightTurn(
   const surface: AiSurface = session.type === 'script_builder' ? 'script_builder' : 'chat';
   let turn;
   try {
-    turn = await resolveSessionTurn({ sessionId, surface, userId: auth.user.id, ...(choice ? { choice } : {}) });
+    turn = await resolveSessionTurn({
+      sessionId, surface, userId: auth.user.id,
+      planUserSession: auth.principal?.kind === 'user_session' && !auth.aiOrigin,
+      ...(choice ? { choice } : {}),
+    });
   } catch (error) {
     captureException(error, undefined, { service: 'aiAgentSdk', orgId });
     return { ok: false, error: 'AI configuration could not be loaded. Try again.', status: 503 };
@@ -1720,7 +1724,8 @@ function createGatedSessionPreToolUse(session: ActiveSession) {
       }
 
       // Determine effective approval mode (pause overrides to per_step)
-      const effectiveMode: AiApprovalMode = session.isPaused ? 'per_step' : session.approvalMode;
+      const effectiveMode: AiApprovalMode = session.isPaused || session.turnBinding.funding === 'chatgpt_plan'
+        ? 'per_step' : session.approvalMode;
 
       // Auto-approve mode only skips approval for Tier 2 tools. Tier 3+
       // tools still require an explicit per-step approval.
@@ -3409,7 +3414,8 @@ export function createSessionPostToolUse(session: ActiveSession): PostToolUseCal
         });
       }
 
-      const effectiveMode = session.isPaused ? 'per_step' : session.approvalMode;
+      const effectiveMode = session.isPaused || session.turnBinding.funding === 'chatgpt_plan'
+        ? 'per_step' : session.approvalMode;
       if (effectiveMode === 'hybrid_plan' && planStepIdx >= 0) {
         if (parsedOutput.imageBase64 && typeof parsedOutput.imageBase64 === 'string') {
           session.eventBus.publish({

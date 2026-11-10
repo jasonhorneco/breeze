@@ -182,6 +182,7 @@ export function buildExtensionAiContext(): ExtensionAiContext {
         orgId: input.orgId,
         userId: ledgerUserId,
         surface: 'extension_content',
+        planConfigured: offeringId === undefined,
         maxTokens: input.maxTokens,
         ...(offeringId ? { requested: { offeringId, origin: 'policy' as const } } : {}),
       });

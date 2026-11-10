@@ -19,8 +19,9 @@ import { captureAtMostHourly } from './llm/platformKeyAlert';
 import { evaluateAiBudgetThresholds } from './aiBudgetAlerts';
 import { getCatalogEntryName } from './llmProviderCatalog';
 import { topologySessionCondition, type TopologySessionVisibility } from './topology/aiSessionAccess';
+import type { AiFundingSource } from '@breeze/shared';
 
-export type AiBillingSource = 'platform' | 'partner_key';
+export type AiBillingSource = AiFundingSource;
 
 export interface CatalogPricingSnapshot {
   catalogEntryId: string;
@@ -922,7 +923,7 @@ async function resolveUsageBilledTo(
   orgId: string,
   monthlyBillingSource: AiBillingSource | null | undefined,
 ): Promise<AiBillingSource> {
-  const rollupLabel: AiBillingSource = monthlyBillingSource === 'partner_key' ? 'partner_key' : 'platform';
+  const rollupLabel: AiBillingSource = monthlyBillingSource ?? 'platform';
   try {
     // Lazy: the resolver graph (registry cutover, legacy projection) must not
     // load with every aiCostTracker importer.

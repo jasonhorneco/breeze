@@ -47,7 +47,8 @@ async function partnerFor(auth: AuthContext, orgId: string): Promise<string | nu
 async function respond(c: Context, load: () => Promise<AiModelChoicesDto>, orgId?: string): Promise<Response> {
   try {
     const data = await load();
-    const reviewProvider = codexReviewCatalog(c.get('auth'), orgId);
+    const reviewProvider = data.choices.some(choice => choice.funding === 'chatgpt_plan')
+      ? undefined : codexReviewCatalog(c.get('auth'), orgId);
     return c.json({ data: reviewProvider ? { ...data, reviewProvider } : data });
   } catch (err) {
     if (err instanceof LlmUnavailableError) return c.json({ error: err.message, code: 'registry_unavailable' }, 503);
@@ -82,7 +83,27 @@ aiModelChoiceRoutes.get(
     }
     const partnerId = await partnerFor(auth, orgId);
     if (!partnerId) return c.json(NOT_FOUND, 404);
-    return respond(c, () => listModelChoices({ partnerId, orgId, userId: auth.user.id, surface: 'chat', current }), orgId);
+    return respond(c, () => listModelChoices({
+      partnerId, orgId, userId: auth.user.id, surface: 'chat', current,
+      ...(auth.principal?.kind === 'user_session' && !auth.aiOrigin ? { planUserSession: true } : {}),
+    }), orgId);
+  },
+);
+
+aiModelChoiceRoutes.get(
+  '/script-builder',
+  requireScope('organization', 'partner', 'system'),
+  requirePermission('scripts', 'write'),
+  async (c) => {
+    const auth = c.get('auth') as AuthContext;
+    const orgId = auth.orgId ?? auth.accessibleOrgIds?.[0] ?? null;
+    if (!orgId || !auth.canAccessOrg(orgId)) return c.json(NOT_FOUND, 404);
+    const partnerId = await partnerFor(auth, orgId);
+    if (!partnerId) return c.json(NOT_FOUND, 404);
+    return respond(c, () => listModelChoices({
+      partnerId, orgId, userId: auth.user.id, surface: 'script_builder',
+      planUserSession: auth.principal?.kind === 'user_session' && !auth.aiOrigin,
+    }), orgId);
   },
 );
 
@@ -107,6 +128,9 @@ aiModelChoiceRoutes.get(
     if (!auth.canAccessOrg(orgId)) return c.json(NOT_FOUND, 404);
     const partnerId = await partnerFor(auth, orgId);
     if (!partnerId) return c.json(NOT_FOUND, 404);
-    return respond(c, () => listModelChoices({ partnerId, orgId, userId: auth.user.id, surface: 'ai_agents' }), orgId);
+    return respond(c, () => listModelChoices({
+      partnerId, orgId, userId: auth.user.id, surface: 'ai_agents',
+      ...(auth.principal?.kind === 'user_session' && !auth.aiOrigin ? { planUserSession: true } : {}),
+    }), orgId);
   },
 );

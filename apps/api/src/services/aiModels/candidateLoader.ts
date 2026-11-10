@@ -43,6 +43,7 @@ import type { CandidateFacts, ConnectionKind, PartnerPlan } from './eligibility'
 import { PARTNER_PLAN_ORDER } from './eligibility';
 import type { GatewayConnectionConfig, GatewayCredential } from './gateway/types';
 import { gatewayCandidate } from './gatewayCandidate';
+import { planCandidate } from './planCandidate';
 import { findOfferingIdForModel, getOffering, type Offering } from './offerings';
 import {
   effectivePlatformInferenceGeos,
@@ -278,6 +279,7 @@ async function platformCandidate(
 async function connectionCandidate(offering: Offering, conn: PartnerAiConnection): Promise<LoadedCandidate> {
   // W06: gateway kinds never read the linked platform row (no price or
   // capability inheritance) and take their capabilities only from verification.
+  if (conn.kind === 'chatgpt_plan') return planCandidate(offering, conn);
   if (isGatewayConnectionKind(conn.kind)) return gatewayCandidate({ offering, conn });
   const linked = offering.platformModelId
     ? await systemRead(() => getPlatformModelById(offering.platformModelId!))
@@ -520,13 +522,14 @@ export async function readSessionModelRow(
   orgId: string;
   offeringId: string | null;
   options: Partial<OfferingOptions> | null;
+  billingSource: AiBillingSource;
   /** W09 (D5): history the SDK would resume (turns run, or a persisted SDK transcript). */
   turnCount: number;
   sdkSessionId: string | null;
 } | null> {
   const [row] = await systemRead(() => db
     .select({
-      orgId: aiSessions.orgId, offeringId: aiSessions.offeringId, options: aiSessions.options,
+      orgId: aiSessions.orgId, offeringId: aiSessions.offeringId, options: aiSessions.options, billingSource: aiSessions.billingSource,
       turnCount: aiSessions.turnCount, sdkSessionId: aiSessions.sdkSessionId,
     })
     .from(aiSessions)
@@ -537,6 +540,7 @@ export async function readSessionModelRow(
         orgId: row.orgId,
         offeringId: row.offeringId ?? null,
         options: (row.options ?? null) as Partial<OfferingOptions> | null,
+        billingSource: row.billingSource,
         turnCount: Number(row.turnCount ?? 0),
         sdkSessionId: row.sdkSessionId ?? null,
       }

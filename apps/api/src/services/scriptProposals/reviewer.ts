@@ -343,7 +343,7 @@ export async function runScriptReview(job: ScriptReviewJobData): Promise<ScriptP
   // holds budget, and the proposal fails with a reason an admin can act on.
   // A system call (no userId), so the per-user permission gate does not apply.
   const resolved = partnerId
-    ? await resolveModel({ partnerId, orgId: job.orgId, surface: 'script_reviewer', maxTokens: SCRIPT_REVIEW_MAX_OUTPUT_TOKENS })
+    ? await resolveModel({ partnerId, orgId: job.orgId, surface: 'script_reviewer', maxTokens: SCRIPT_REVIEW_MAX_OUTPUT_TOKENS, planConfigured: true })
     : null;
   if (!resolved?.ok) {
     return failReview(job, resolved ? resolved.message : 'No AI model is available for script review.', 'failed', {

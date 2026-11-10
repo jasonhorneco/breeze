@@ -6,6 +6,7 @@
  */
 import {
   AI_DISPATCHABLE_CONNECTION_KINDS,
+  isConfigurableAiSurface,
   TOOL_REQUIRING_SURFACES,
   type AiDispatchableConnectionKind,
   type AiSurface,
@@ -62,6 +63,8 @@ export interface CandidateFacts {
   supportsTools: boolean;
   inferenceGeo: string | null;
   supportedInferenceGeos: readonly string[];
+  planOwnerId?: string | null;
+  planOrgId?: string | null;
 }
 
 export interface EligibilityContext {
@@ -73,10 +76,19 @@ export interface EligibilityContext {
   geoCarriable: boolean;
   userInitiated: boolean;
   userHoldsPermission: (permissionKey: string) => boolean;
+  planPrincipal?: { userId: string; orgId: string };
+  planConfiguredOrgId?: string;
 }
 
 export function checkEligibility(c: CandidateFacts, ctx: EligibilityContext): ResolveFailureReason | null {
   if (c.ownerPartnerId !== ctx.partnerId) return 'not_permitted';
+  if (c.connection.kind === 'chatgpt_plan') {
+    const direct = ctx.planPrincipal?.userId === c.planOwnerId && ctx.planPrincipal?.orgId === c.planOrgId;
+    const configured = ctx.planConfiguredOrgId === c.planOrgId;
+    if (!c.planOwnerId || !c.planOrgId || !isConfigurableAiSurface(ctx.surface) || (!direct && !configured)) {
+      return 'not_permitted';
+    }
+  }
   if (!c.enabled || c.lifecycle !== 'available') return 'model_unavailable';
   if (c.platform && (!c.platform.platformOffered || c.platform.lifecycle !== 'available')) {
     return 'model_unavailable';
@@ -143,6 +155,8 @@ export interface EnableEligibilityContext {
   partnerId: string;
   partnerPlan: PartnerPlan | null;
   hosted: boolean;
+  planWriterId?: string;
+  planWriterOrgId?: string;
 }
 export type EnableGateReason =
   | 'not_permitted'
@@ -183,7 +197,9 @@ function enableContext(ctx: EnableEligibilityContext): EligibilityContext {
 
 /** The enable-time gate. Returns null when the offering may be enabled. Connection health never blocks; a disconnected connection does. */
 export function checkEnableEligibility(c: CandidateFacts, ctx: EnableEligibilityContext): EnableGateReason | null {
-  const reason = checkEligibility(neutralised(c), enableContext(ctx));
+  const context = enableContext(ctx);
+  if (c.planOwnerId && c.planOrgId) context.planPrincipal = { userId: c.planOwnerId, orgId: c.planOrgId };
+  const reason = checkEligibility(neutralised(c), context);
   if (reason === null) return null;
   switch (reason) {
     case 'not_permitted':

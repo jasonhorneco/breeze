@@ -70,14 +70,7 @@ function logIds(grant: GatewayGrantRecord): string {
 
 /** The upstream origin a grant may reach. W07 adds a cloud arm per kind (the `never` default forces it). */
 export function upstreamOriginFor(grant: GatewayGrantRecord): string {
-  switch (grant.config.kind) {
-    case 'openai_compatible':
-      return new URL(grant.config.baseUrl).origin;
-    default: {
-      const never: never = grant.config.kind;
-      throw new Error(`no upstream origin for ${String(never)}`);
-    }
-  }
+  return new URL(grant.config.baseUrl).origin;
 }
 
 /**
@@ -85,26 +78,12 @@ export function upstreamOriginFor(grant: GatewayGrantRecord): string {
  * so a grant for `https://h/api/v1` cannot be steered at `https://h/admin`.
  */
 function upstreamPathPrefixFor(grant: GatewayGrantRecord): string {
-  switch (grant.config.kind) {
-    case 'openai_compatible':
-      return new URL(grant.config.baseUrl).pathname.replace(/\/+$/, '');
-    default: {
-      const never: never = grant.config.kind;
-      throw new Error(`no upstream path for ${String(never)}`);
-    }
-  }
+  return new URL(grant.config.baseUrl).pathname.replace(/\/+$/, '');
 }
 
 /** Auth headers for a grant's upstream. W07 adds per-kind arms (SigV4, Google bearer, Azure key). */
 export function upstreamAuthHeaders(grant: GatewayGrantRecord): Record<string, string> {
-  switch (grant.config.kind) {
-    case 'openai_compatible':
-      return grant.credential.secret ? { authorization: `Bearer ${grant.credential.secret}` } : {};
-    default: {
-      const never: never = grant.config.kind;
-      throw new Error(`no auth for ${String(never)}`);
-    }
-  }
+  return grant.credential.secret ? { authorization: `Bearer ${grant.credential.secret}` } : {};
 }
 
 function hostOf(grant: GatewayGrantRecord): string {

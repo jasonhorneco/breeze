@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { EFFORT_LEVELS, type AiReviewProviderDto, type EffortLevel } from '@breeze/shared';
+import { EFFORT_LEVELS, type AiModelChoicesDto, type AiReviewProviderDto, type EffortLevel, type OfferingOptions } from '@breeze/shared';
 import { useAiModelPickerStore } from '@/stores/aiModelPickerStore';
 import { useAiStore } from '@/stores/aiStore';
 import { formatCentsPerM, formatContextTokens } from './modelPickerFormat';
+import ModelProviderSelect from './ModelProviderSelect';
 
 const NO_ALTERNATIVES: string[] = [];
 
@@ -27,20 +28,38 @@ export function AlertReviewModelPicker({ catalog, value, onChange, disabled }: {
 
 /** Spec §11 "Chat composer": model menu + the options the chosen model supports. */
 export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
-  const { t } = useTranslation('ai');
-  const [open, setOpen] = useState(false);
   const { choices, select, setOption, effective } = useAiModelPickerStore();
   const refusalAlternatives = useAiStore((s) => s.refusalAlternatives ?? NO_ALTERNATIVES);
+  return <ModelPickerControl choices={choices} select={select} setOption={setOption} value={effective()}
+    refusalAlternatives={refusalAlternatives} disabled={disabled} />;
+}
+
+export function ModelPickerControl({ choices, select, setOption, value, disabled, refusalAlternatives = NO_ALTERNATIVES }: {
+  choices: AiModelChoicesDto | null;
+  select: (offeringId: string) => void;
+  setOption: <K extends keyof OfferingOptions>(key: K, value: OfferingOptions[K] | undefined) => void;
+  value: { offeringId: string | null; options: OfferingOptions };
+  disabled?: boolean;
+  refusalAlternatives?: readonly string[];
+}) {
+  const { t } = useTranslation('ai');
+  const [open, setOpen] = useState(false);
   if (!choices) return null;
   const standardChoices = choices.allowUserChoice ? choices.choices : [];
   const review = choices.reviewProvider;
   if (standardChoices.length === 0 && !review) return null;
 
-  const { offeringId, options } = effective();
+  const { offeringId, options } = value;
   const chosen = standardChoices.find((c) => c.offeringId === offeringId) ?? null;
+  const providerChoices = standardChoices.flatMap(choice => choice.provider && !choice.disabled
+    ? [{ id: choice.offeringId, provider: choice.provider.id, label: choice.provider.name }] : []);
+  const visibleModels = chosen?.provider
+    ? standardChoices.filter(choice => choice.provider?.id === chosen.provider?.id) : standardChoices;
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-t px-3 pt-2 text-xs" data-testid="ai-model-picker">
+      <ModelProviderSelect choices={providerChoices} selected={offeringId ?? ''} onSelect={select}
+        testId="ai-model-provider" disabled={disabled} />
       <div className="relative">
         <button
           type="button"
@@ -56,9 +75,9 @@ export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
         </button>
         {open && (
           <ul role="listbox" className="absolute bottom-full left-0 z-20 mb-1 w-80 rounded-md border bg-popover p-1 shadow-md">
-            {standardChoices.map((c) => {
+            {visibleModels.map((c) => {
               const context = formatContextTokens(c.contextTokens);
-              const price = t('aiModelPicker.price', {
+              const price = c.funding === 'chatgpt_plan' ? 'OpenAI Codex · ChatGPT subscription' : t('aiModelPicker.price', {
                 input: formatCentsPerM(c.priceHint.inputCentsPerM),
                 output: formatCentsPerM(c.priceHint.outputCentsPerM),
               });
@@ -120,7 +139,7 @@ export default function AiModelPicker({ disabled }: { disabled?: boolean }) {
           >
             <option value="">{t('aiModelPicker.effortDefault')}</option>
             {EFFORT_LEVELS.filter((e) => chosen.options.effort.includes(e)).map((e) => (
-              <option key={e} value={e}>{t(/* i18n-dynamic */ `aiModelPicker.effortLevels.${e}`)}</option>
+              <option key={e} value={e}>{t(/* i18n-dynamic */ `aiModelPicker.effortLevels.${e}`, { defaultValue: e })}</option>
             ))}
           </select>
         </label>
