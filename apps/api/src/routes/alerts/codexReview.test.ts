@@ -1,0 +1,87 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
+
+const mock = vi.hoisted(() => ({
+  user: '3ecef742-f1b0-4f24-9a40-1f97d13f4af2',
+  principal: 'user_session', org: '74d52c8a-9434-4160-9bae-0d663ce169a5',
+  read: vi.fn(), audit: vi.fn(), upstream: vi.fn(),
+}));
+vi.mock('node:fs/promises', () => ({ readFile: async () => 'synthetic-service-token-0000000000000' }));
+vi.mock('../../db', () => ({
+  db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: 'Test BMC' }] }) }) }) },
+}));
+vi.mock('./helpers', () => ({ getAlertWithOrgCheck: mock.read }));
+vi.mock('../../services/auditEvents', () => ({ writeRouteAudit: mock.audit }));
+vi.mock('../../middleware/auth', () => ({
+  requireScope: () => async (c: Context, next: Next) => {
+    c.set('auth', { user: { id: mock.user }, principal: { kind: mock.principal } });
+    await next();
+  },
+  requirePermission: () => async (_c: Context, next: Next) => { await next(); },
+  requireMfa: () => async (_c: Context, next: Next) => { await next(); },
+}));
+import { codexReviewRoutes } from './codexReview';
+
+const id = '383c5401-fd5b-4906-b02f-71d11ed857ed';
+const owner = '3ecef742-f1b0-4f24-9a40-1f97d13f4af2';
+const organization = '74d52c8a-9434-4160-9bae-0d663ce169a5';
+const path = '/' + id + '/codex-review';
+const app = new Hono().route('/', codexReviewRoutes);
+const digest = 'a'.repeat(64);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mock.user = owner;
+  mock.principal = 'user_session';
+  mock.org = organization;
+  vi.stubEnv('BREEZE_CODEX_PILOT_ENABLED', 'true');
+  vi.stubEnv('BREEZE_CODEX_PILOT_ALERT_ID', id);
+  vi.stubEnv('BREEZE_CODEX_PILOT_OWNER_ID', owner);
+  vi.stubEnv('BREEZE_CODEX_PILOT_ORG_ID', organization);
+  vi.stubEnv('BREEZE_CODEX_PILOT_RULE_NAME', 'Test BMC');
+  vi.stubGlobal('fetch', mock.upstream);
+  mock.read.mockImplementation(async () => ({
+    id, orgId: mock.org, status: 'resolved', ruleId: id,
+    message: 'Test BMC: fan1: reading unavailable', severity: 'high',
+    triggeredAt: new Date('2026-10-15T07:00:00Z'), resolvedAt: new Date('2026-10-15T07:02:00Z'),
+  }));
+  mock.upstream.mockImplementation(async () => Response.json({ review: null, attempt: null }));
+});
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+describe('owner-only Codex pilot', () => {
+  it('rejects disabled, wrong-alert, machine, wrong-owner and cross-org access before upstream', async () => {
+    vi.stubEnv('BREEZE_CODEX_PILOT_ENABLED', 'false');
+    expect((await app.request(path)).status).toBe(404);
+    vi.stubEnv('BREEZE_CODEX_PILOT_ENABLED', 'true');
+    expect((await app.request('/other/codex-review')).status).toBe(404);
+    mock.principal = 'api_key';
+    expect((await app.request(path)).status).toBe(404);
+    mock.principal = 'user_session';
+    mock.user = id;
+    expect((await app.request(path)).status).toBe(404);
+    mock.user = owner;
+    mock.org = id;
+    expect((await app.request(path)).status).toBe(404);
+    expect(mock.upstream).not.toHaveBeenCalled();
+  });
+
+  it('projects only an allowlisted stored record and forwards a separate audited owner decision', async () => {
+    mock.upstream.mockImplementationOnce(async () => Response.json({ review: null, attempt: { state: 'started' } }, { status: 202 }));
+    expect((await app.request(path, { method: 'POST' })).status).toBe(202);
+    const request = mock.upstream.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toEqual({
+      condition: 'fan1: reading unavailable', severity: 'high',
+      triggeredAt: '2026-10-15T07:00:00.000Z', resolvedAt: '2026-10-15T07:02:00.000Z',
+    });
+    const response = await app.request(path + '/decision', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ digest, decision: 'rejected' }),
+    });
+    expect(response.status).toBe(200);
+    const verdict = mock.upstream.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(verdict.body as string)).toEqual({ reviewerId: owner, digest, decision: 'rejected' });
+    expect(mock.audit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ resourceId: id, result: 'success' }));
+  });
+});

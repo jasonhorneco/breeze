@@ -35,6 +35,7 @@ import {
 } from './alertMlContext';
 import { fillDevicePlaceholders, type AlertAiVerdictSummaryDto } from '@breeze/shared';
 import AlertVerdictBadge, { submitVerdictFeedback } from './AlertVerdictBadge';
+import { CodexPilotReview } from './CodexPilotReview';
 import { useStableT } from '@/lib/i18n/useStableT';
 import { usePageItemName } from '../layout/usePageItemName';
 
@@ -74,6 +75,7 @@ type Alert = AlertSubjectFields & {
   // Phase 2 wave P2-1 (alert verdicts), Task 15. Null when the alert has no
   // verdict yet (or the org has AI agents disabled).
   aiVerdict?: AlertAiVerdictSummaryDto | null;
+  codexPilotAvailable?: true;
 };
 
 type ExternalTicket = {
@@ -342,6 +344,8 @@ export default function AlertDetailPage({ alertId }: AlertDetailPageProps) {
         { label: t('alertDetailPage.alertsBreadcrumb'), href: '/alerts' },
         { label: alert.title || t('alertDetailPage.alertFallback') }
       ]} />
+
+      {alert.codexPilotAvailable && <CodexPilotReview key={alert.id} alertId={alert.id} />}
 
       {/* Header Card */}
       <div className="rounded-lg border bg-card p-6 shadow-xs">

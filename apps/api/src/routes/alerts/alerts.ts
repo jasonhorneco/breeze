@@ -43,6 +43,7 @@ import { latestVerdictsForAlerts, projectAlertAiVerdictSummary } from '../../ser
 import { listAlertsSchema, resolveAlertSchema, suppressAlertSchema, unsuppressAlertSchema, bulkAlertActionSchema, type AlertStatusValue } from './schemas';
 import { getPagination, ensureOrgAccess, getAlertWithOrgCheck, alertSiteScopeCondition } from './helpers';
 import { fillStoredAlertCopy } from './alertCopy';
+import { isCodexPilotOwner } from './codexReview';
 import { enrichAlertSubjects } from '../../services/alertSubject';
 import { withAlertActorNames } from './actorNames';
 import { canAccessSite, getUserPermissions, hasPermission, PERMISSIONS, type UserPermissions } from '../../services/permissions';
@@ -1441,6 +1442,9 @@ alertsRoutes.get(
         isActive: rule.isActive
       } : null,
       notifications,
+      ...(isCodexPilotOwner(auth, alert.id) && alert.orgId === process.env.BREEZE_CODEX_PILOT_ORG_ID
+        ? { codexPilotAvailable: true }
+        : {}),
       aiVerdict: verdict
         ? {
           ...projectAlertAiVerdictSummary(verdict),

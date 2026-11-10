@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth';
 import { rulesRoutes } from './rules';
 import { alertsRoutes } from './alerts';
+import { codexReviewRoutes } from './codexReview';
 import { alertPsaTicketRoutes } from './alertPsaTicket';
 import { alertExternalTicketRoutes } from './alertExternalTickets';
 import { channelsRoutes } from './channels';
@@ -26,5 +27,6 @@ alertRoutes.route('/', deliveryRailsRoutes);
 alertRoutes.route('/', deliveryRoutes);
 alertRoutes.route('/', alertExternalTicketRoutes);
 alertRoutes.route('/', alertPsaTicketRoutes);
+alertRoutes.route('/', codexReviewRoutes);
 alertRoutes.route('/', alertsRoutes);
 
