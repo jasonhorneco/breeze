@@ -12,6 +12,7 @@ import {
 import { db, runOutsideDbContext, withSystemDbAccessContext } from '../db';
 import { authMiddleware, isInteractiveUserSession } from '../middleware/auth';
 import { approvalRequests } from '../db/schema/approvals';
+import { codexDraftDigest } from '../services/approvals/codexDraft';
 import { diagnosticAccessGrants } from '../db/schema/diagnosticAccess';
 import { aiToolExecutions, aiSessions } from '../db/schema/ai';
 import { delegantM365Connections } from '../db/schema/delegant';
@@ -626,6 +627,7 @@ approvalRoutes.get('/pending/count', async (c) => {
 
 const denySchema = z.object({
   reason: z.string().max(500).optional(),
+  reviewDigest: codexDraftDigest.optional(),
 });
 
 const seedSchema = z.object({
@@ -927,6 +929,8 @@ approvalRoutes.post('/:id/approve', async (c) => {
   // session-tap behavior.
   let proof: ApprovalProof | undefined;
   const raw = await c.req.json().catch(() => null);
+  const reviewDigest = codexDraftDigest.optional().safeParse(raw?.reviewDigest);
+  if (!reviewDigest.success) return c.json({ error: 'Invalid review digest' }, 400);
   if (raw && raw.proof !== undefined) {
     const parsed = approveProofSchema.safeParse(raw.proof);
     if (!parsed.success) return c.json({ error: 'Invalid proof' }, 400);
@@ -997,12 +1001,13 @@ approvalRoutes.post('/:id/approve', async (c) => {
       reauthVerified,
       stepUpGrantId,
       acknowledgedPatterns,
+      ...(reviewDigest.data === undefined ? {} : { reviewDigest: reviewDigest.data }),
     }),
   );
 });
 
 approvalRoutes.post('/:id/deny', zValidator('json', denySchema), async (c) => {
-  const reason = c.req.valid('json').reason;
+  const { reason, reviewDigest } = c.req.valid('json');
   return respond(
     c,
     await decideApprovalRequest({
@@ -1010,6 +1015,7 @@ approvalRoutes.post('/:id/deny', zValidator('json', denySchema), async (c) => {
       id: c.req.param('id'),
       status: 'denied',
       reason,
+      ...(reviewDigest === undefined ? {} : { reviewDigest }),
     }),
   );
 });

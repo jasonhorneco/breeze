@@ -3,6 +3,7 @@ import { and, eq, exists, gt, inArray, ne, sql } from 'drizzle-orm';
 import { db, runOutsideDbContext, withSystemDbAccessContext } from '../../db';
 import { hasSatisfiedMfa, isInteractiveUserSession, type AuthContext } from '../../middleware/auth';
 import { approvalRequests } from '../../db/schema/approvals';
+import { canDecideCodexDraft, CODEX_DRAFT_TOOL } from './codexDraft';
 import { elevationRequests, elevationAudit } from '../../db/schema/elevations';
 import { normalizePamDenialReason } from '../pamDenialReason';
 import { aiToolExecutions, aiSessions } from '../../db/schema/ai';
@@ -471,6 +472,7 @@ async function redeemGrantForDecide(input: {
 /** Everything the decide core needs from the request. `auth` replaces the
  *  route's `c.get('auth')`; `id` replaces `c.req.param('id')`. */
 export interface DecideApprovalInput {
+  reviewDigest?: string;
   auth: AuthContext;
   id: string;
   status: 'approved' | 'denied';
@@ -557,6 +559,10 @@ export async function decideApprovalRequest(
   }
   if (existing.expiresAt <= new Date()) {
     return { httpStatus: 410, body: { error: 'Expired', finalStatus: 'expired' } };
+  }
+  if (existing.actionToolName === CODEX_DRAFT_TOOL &&
+      !await canDecideCodexDraft(input.auth, existing, input.reviewDigest)) {
+    return { httpStatus: 403, body: { error: 'codex_draft_review_denied' } };
   }
 
   // §6C (fix/pam-dedicated-permissions): the PAM mobile-bridge elevation

@@ -182,7 +182,9 @@ export default function RecentApprovals() {
                                 present in every locale; a status the locale
                                 files do not know renders raw rather than
                                 blank. */}
-                            {t(/* i18n-dynamic */ `recent.status.${status}`, { defaultValue: status })}
+                            {row.actionToolName === 'codex_review_draft' && status === 'approved'
+                              ? 'Draft review accepted'
+                              : t(/* i18n-dynamic */ `recent.status.${status}`, { defaultValue: status })}
                           </span>
                           {row.orgName ? ` · ${row.orgName}` : ''}
                           {row.decidedAt ? ` · ${formatRelativeTime(new Date(row.decidedAt))}` : ''}

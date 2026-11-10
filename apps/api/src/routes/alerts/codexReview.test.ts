@@ -5,14 +5,18 @@ import type { Context, Next } from 'hono';
 const mock = vi.hoisted(() => ({
   user: '3ecef742-f1b0-4f24-9a40-1f97d13f4af2',
   principal: 'user_session', org: '74d52c8a-9434-4160-9bae-0d663ce169a5',
-  read: vi.fn(), audit: vi.fn(), upstream: vi.fn(),
+  read: vi.fn(), publish: vi.fn(), readApproval: vi.fn(), upstream: vi.fn(),
 }));
 vi.mock('node:fs/promises', () => ({ readFile: async () => 'synthetic-service-token-0000000000000' }));
 vi.mock('../../db', () => ({
   db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: 'Test BMC' }] }) }) }) },
 }));
 vi.mock('./helpers', () => ({ getAlertWithOrgCheck: mock.read }));
-vi.mock('../../services/auditEvents', () => ({ writeRouteAudit: mock.audit }));
+vi.mock('../../services/approvals/codexDraft', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../services/approvals/codexDraft')>(),
+  publishCodexDraft: mock.publish,
+  readCodexDraftApproval: mock.readApproval,
+}));
 vi.mock('../../middleware/auth', () => ({
   requireScope: () => async (c: Context, next: Next) => {
     c.set('auth', { user: { id: mock.user }, principal: { kind: mock.principal } });
@@ -28,7 +32,6 @@ const owner = '3ecef742-f1b0-4f24-9a40-1f97d13f4af2';
 const organization = '74d52c8a-9434-4160-9bae-0d663ce169a5';
 const path = '/' + id + '/codex-review';
 const app = new Hono().route('/', codexReviewRoutes);
-const digest = 'a'.repeat(64);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -67,7 +70,7 @@ describe('owner-only Codex pilot', () => {
     expect(mock.upstream).not.toHaveBeenCalled();
   });
 
-  it('projects only an allowlisted stored record and forwards a separate audited owner decision', async () => {
+  it('projects allowlisted evidence and publishes the saved draft without deciding it', async () => {
     mock.upstream.mockImplementationOnce(async () => Response.json({ review: null, attempt: { state: 'started' } }, { status: 202 }));
     expect((await app.request(path, { method: 'POST' })).status).toBe(202);
     const request = mock.upstream.mock.calls[0]?.[1] as RequestInit;
@@ -75,13 +78,13 @@ describe('owner-only Codex pilot', () => {
       condition: 'fan1: reading unavailable', severity: 'high',
       triggeredAt: '2026-10-15T07:00:00.000Z', resolvedAt: '2026-10-15T07:02:00.000Z',
     });
-    const response = await app.request(path + '/decision', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ digest, decision: 'rejected' }),
-    });
+    const review = { requestId: id, proposal: { kind: 'policy' }, decision: 'pending' };
+    mock.upstream.mockResolvedValueOnce(Response.json({ review }));
+    mock.publish.mockResolvedValueOnce({ id, status: 'pending' });
+    const response = await app.request(path + '/publish', { method: 'POST' });
     expect(response.status).toBe(200);
-    const verdict = mock.upstream.mock.calls[1]?.[1] as RequestInit;
-    expect(JSON.parse(verdict.body as string)).toEqual({ reviewerId: owner, digest, decision: 'rejected' });
-    expect(mock.audit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ resourceId: id, result: 'success' }));
+    expect(await response.json()).toMatchObject({ approval: { id, status: 'pending' } });
+    expect(mock.publish).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id }), review);
+    expect((await app.request(path + '/decision', { method: 'POST' })).status).toBe(404);
   });
 });

@@ -803,8 +803,16 @@ export default function ApprovalsInbox() {
       // stops on "register a device". `opts` (the script-proposal card's STRICT
       // acknowledgements) is only appended when present.
       const scope = knownApprovalScope(approval.approvalScope);
-      const outcome =
-        decision === 'approve'
+      const reviewOnly = approval.actionToolName === 'codex_review_draft';
+      const outcome = reviewOnly
+        ? await runAction({
+            request: () => fetchWithAuth(`/approvals/${approval.id}/${decision}`, {
+              method: 'POST',
+              body: JSON.stringify({ reason: reason?.trim(), reviewDigest: approval.actionArguments?.digest }),
+            }),
+            errorFallback: 'The Codex draft review could not be recorded.',
+          }).then(() => undefined)
+        : decision === 'approve'
           // silentSuccess: the toast below is this path's one success message.
           ? await decideIntentApproval(approval.id, 'approve', undefined, scope, { ...opts, silentSuccess: true })
           : await decideIntentApproval(approval.id, 'deny', reason?.trim() || undefined);
@@ -827,7 +835,7 @@ export default function ApprovalsInbox() {
       if (decision === 'approve' && outcome !== 'refused') {
         showToast({
           type: 'success',
-          message: t('approveToast', {
+          message: reviewOnly ? 'Codex draft review recorded.' : t('approveToast', {
             action: approval.actionLabel,
             org: approval.orgName ?? t('unknownOrganization'),
           }),
@@ -1194,6 +1202,13 @@ export default function ApprovalsInbox() {
                 {approval.riskSummary}
               </p>
             )}
+            {approval.actionToolName === 'codex_review_draft' &&
+              typeof approval.actionArguments?.alertId === 'string' &&
+              /^[0-9a-f-]{36}$/.test(approval.actionArguments.alertId) && (
+                <a className="mt-2 inline-block text-sm underline" href={`/alerts/${approval.actionArguments.alertId}`}>
+                  Read the draft and source alert
+                </a>
+              )}
             {isOperatorPlanApproval(approval.actionToolName) && (
               // Rendered INLINE, not behind a toggle like the script proposal:
               // the script card fetches a body, this one is already in the

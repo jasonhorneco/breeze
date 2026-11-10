@@ -8,7 +8,6 @@ type Review = {
   citations: string[];
   unknown: string;
   proposal: Proposal | null;
-  proposalDigest: string | null;
   decision: 'pending' | 'accepted' | 'rejected' | 'none';
   model: string;
   effort: string;
@@ -16,6 +15,7 @@ type Review = {
 type PilotState = {
   review: Review | null;
   attempt: { state: 'started' | 'completed' | 'failed'; code?: string } | null;
+  approval?: { id: string; status: string };
 };
 
 function failureMessage(code: string | undefined) {
@@ -58,13 +58,12 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
   const review = pilot?.review;
   const attempt = pilot?.attempt;
 
-  async function submit(choice?: 'accepted' | 'rejected') {
+  async function submit(publish = false) {
     setBusy(true);
     try {
       const data = await runAction<PilotState>({
-        request: () => fetchWithAuth(path + (choice ? '/decision' : ''), {
+        request: () => fetchWithAuth(path + (publish ? '/publish' : ''), {
           method: 'POST',
-          ...(choice ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ digest: review?.proposalDigest, decision: choice }) } : {}),
         }),
         errorFallback: 'The Codex pilot request failed.',
       });
@@ -108,16 +107,13 @@ export function CodexPilotReview({ alertId }: { alertId: string }) {
               <h3 className="font-semibold">{review.proposal.title}</h3>
               <p className="whitespace-pre-wrap">{review.proposal.draft}</p>
               <p><strong>Risk</strong> {review.proposal.risk}</p>
-              {review.decision === 'pending' ? (
-                <div className="flex flex-wrap gap-2">
-                  <button className="rounded-md border px-3 py-2" type="button" disabled={busy} onClick={() => void submit('accepted')}>
-                    Approve draft
-                  </button>
-                  <button className="rounded-md border px-3 py-2" type="button" disabled={busy} onClick={() => void submit('rejected')}>
-                    Reject draft
-                  </button>
-                </div>
-              ) : <p role="status">Draft {review.decision}. Your decision has been recorded.</p>}
+              {pilot?.approval ? (
+                <p role="status">Draft review {pilot.approval.status}. <a className="underline" href="/approvals">Open Approvals</a></p>
+              ) : review.decision === 'pending' ? (
+                <button className="rounded-md border px-3 py-2" type="button" disabled={busy} onClick={() => void submit(true)}>
+                  Send draft to Approvals
+                </button>
+              ) : <p role="status">Draft {review.decision}. Your review was recorded.</p>}
             </div>
           )}
         </>
