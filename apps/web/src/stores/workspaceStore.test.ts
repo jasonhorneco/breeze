@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CreateTicketFromChatInput } from '@breeze/shared';
+import { createAiSessionSchema, type CreateTicketFromChatInput } from '@breeze/shared';
 
 const storageHarness = vi.hoisted(() => {
   const data = new Map<string, string>();
@@ -350,7 +350,7 @@ describe('workspace store sendMessage title handling', () => {
 describe('workspace model selection', () => {
   it.each([false, true])('carries a model choice with the right request (existing: %s)', async (existing) => {
     vi.clearAllMocks();
-    const model = { offeringId: 'plan-sol', options: { effort: 'high' as const } };
+    const model = { offeringId: '31c119ed-1eef-4c25-8454-f7e3adfb8e5e', options: { effort: 'high' as const } };
     useWorkspaceStore.setState({
       tabs: [tab({ sessionId: existing ? 'session-1' : null, modelChoice: model })],
       activeTabId: 'tab-1',
@@ -364,7 +364,8 @@ describe('workspace model selection', () => {
     const requests = fetchWithAuthMock.mock.calls.map(([path, init]) => [path, JSON.parse(String(init?.body))]);
     expect(requests).toEqual(existing
       ? [['/ai/sessions/session-1/messages', { content: 'hello', model }]]
-      : [['/ai/sessions', { model, orgId: 'home' }], ['/ai/sessions/session-1/messages', { content: 'hello' }]]);
+      : [['/ai/sessions', { ...model, orgId: 'home' }], ['/ai/sessions/session-1/messages', { content: 'hello' }]]);
+    if (!existing) expect(createAiSessionSchema.parse(requests[0]?.[1])).toEqual(model);
     expect(useWorkspaceStore.getState().tabs[0]?.modelChoice).toBeUndefined();
   });
 });

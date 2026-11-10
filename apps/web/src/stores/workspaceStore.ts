@@ -767,7 +767,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   ...(wisp
                     ? { orgId: wisp.orgId ?? undefined, wispGrantId: wisp.grantId, approvalMode: tab.approvalMode }
                     : {}),
-                  ...(choice ? { model: choice.model, ...(!wisp && choice.orgId ? { orgId: choice.orgId } : {}) } : {}),
+                  // Creation takes the offering and options directly. Only
+                  // the message endpoint accepts a nested model choice.
+                  ...(choice ? {
+                    offeringId: choice.model.offeringId, options: choice.model.options,
+                    ...(!wisp && choice.orgId ? { orgId: choice.orgId } : {}),
+                  } : {}),
                   pageContext: tab.pageContext ?? undefined,
                   // Carry a user-set title through to the new session so the
                   // server's first-message auto-title (gated on `!title`)
