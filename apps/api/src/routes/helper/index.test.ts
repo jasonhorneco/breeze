@@ -316,6 +316,7 @@ describe('helper routes permission derivation', () => {
     });
     expect(chooseSessionModelMock).toHaveBeenCalledWith({
       partnerId: 'partner-1', orgId: 'org-1', userId: null, surface: 'helper',
+      planConfigured: true,
     });
   });
 
@@ -672,7 +673,7 @@ describe('helper routes permission derivation', () => {
     const onlyTools = (serverCall[5] as { onlyTools: Set<string> }).onlyTools;
     expect([...onlyTools].sort()).toEqual(getHelperAllowedTools('standard').sort());
     expect(allowedTools!.map((n) => n.replace('mcp__breeze__', '')).sort()).toEqual([...onlyTools].sort());
-    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'helper', userId: null });
+    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'helper', userId: null, planConfigured: true });
     expect(chooseSessionModelMock).not.toHaveBeenCalled();
     expect(checkBudgetDetailedMock).toHaveBeenCalledWith('org-1', 'partner_key');
     // Org-axis AI rate limiter — the same ceiling technician chat enforces
@@ -774,7 +775,7 @@ describe('helper routes permission derivation', () => {
     await res.text();
 
     expect(res.status).toBe(200);
-    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'helper', userId: null });
+    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'helper', userId: null, planConfigured: true });
     const call = vi.mocked(streamingSessionManager.getOrCreate).mock.calls[0]!;
     expect(call[6]).toBe(model);
     expect(call[1]).not.toHaveProperty('model');
@@ -1064,7 +1065,7 @@ describe('helper routes permission derivation', () => {
     });
     expect(streamingSessionManager.getOrCreate).not.toHaveBeenCalled();
     expect(reserveAiBudgetMock).not.toHaveBeenCalled();
-    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'helper', userId: null });
+    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'helper', userId: null, planConfigured: true });
   });
 
   /**
@@ -1180,6 +1181,7 @@ describe('helper client-declared session tools', () => {
     expect(res.status).toBe(201);
     const snapshot = insertedValues?.contextSnapshot as Record<string, unknown>;
     expect(snapshot.clientTools).toEqual([VALID_TOOL_DECL]);
+    expect(chooseSessionModelMock).toHaveBeenCalledWith(expect.objectContaining({ planConfigured: true }));
   });
 
   it('rejects an invalid clientTools declaration at create (400)', async () => {
@@ -1244,6 +1246,7 @@ describe('helper client-declared session tools', () => {
     const call = vi.mocked(streamingSessionManager.getOrCreate).mock.calls[0];
     const allowedTools = call?.[7] as string[] | undefined;
     expect(allowedTools).toEqual(['mcp__client_tools__search_files']);
+    expect(resolveSessionTurnMock).toHaveBeenCalledWith(expect.objectContaining({ planConfigured: true }));
     // The client-declared MCP factory is passed (a function), replacing the default.
     expect(typeof call?.[8]).toBe('function');
   });

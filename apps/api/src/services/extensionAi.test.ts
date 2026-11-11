@@ -252,6 +252,7 @@ describe('buildExtensionAiContext', () => {
         partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'extension_content', modelId: 'claude-haiku-4-5',
       });
       expect(resolveModel).toHaveBeenCalledWith(expect.objectContaining({
+        planConfigured: true,
         requested: { offeringId: OFFERING_ID, origin: 'policy' },
       }));
     });

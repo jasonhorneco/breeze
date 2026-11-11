@@ -175,7 +175,7 @@ async function runHelperPreFlight(
   let model: ResolvedModel;
   try {
     const turn = await resolveSessionTurn({
-      sessionId, surface: 'helper', userId: null, planConfigured: clientToolsFromSession(session).length === 0,
+      sessionId, surface: 'helper', userId: null, planConfigured: true,
     });
     if (!turn.ok) {
       return { ok: false, error: turn.message, status: turn.reason === 'registry_unavailable' ? 503 : 409, code: turn.reason };
@@ -288,7 +288,7 @@ helperRoutes.post(
     let choice: SessionModelChoice;
     try {
       choice = await chooseSessionModel({
-        partnerId, orgId: device.orgId, userId: null, surface: 'helper', planConfigured: !body.clientTools?.length,
+        partnerId, orgId: device.orgId, userId: null, surface: 'helper', planConfigured: true,
       });
     } catch (error) {
       if (error instanceof LlmUnavailableError || error instanceof LlmNotConfiguredError) {
