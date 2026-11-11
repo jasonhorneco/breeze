@@ -1115,7 +1115,7 @@ describe('agent policy model by offering (AI model registry W05, #7603)', () => 
   it('create with offeringId binds it for the writer and stores the offering, no model string (W08)', async () => {
     state.returnedRow = storedRow;
     await createAgent(auth(), owner, { ...createInput, offeringId: 'opus' } as never);
-    expect(bindAgentOffering).toHaveBeenCalledWith(owner, 'opus', { userId: 'u1' });
+    expect(bindAgentOffering).toHaveBeenCalledWith(owner, 'opus', { userId: 'u1', planUserSession: true });
     expect(state.insertedValues).toMatchObject({ offeringId: 'opus', offeringPartnerId: 'p1' });
     expect(state.insertedValues).not.toHaveProperty('model');
   });
@@ -1125,6 +1125,15 @@ describe('agent policy model by offering (AI model registry W05, #7603)', () => 
     await createAgent(auth(), owner, createInput as never);
     expect(state.insertedValues).toMatchObject({ offeringId: null, offeringPartnerId: null });
     expect(state.insertedValues).not.toHaveProperty('model');
+  });
+
+  it.each<Partial<AuthContext>>([
+    { principal: { kind: 'api_key' } },
+    { aiOrigin: { kind: 'ai_assistant' } },
+  ])('does not grant subscription-owner consent to a machine or AI-origin write: %j', async (context) => {
+    state.returnedRow = storedRow;
+    await createAgent(auth(context), owner, { ...createInput, offeringId: 'opus' } as never);
+    expect(bindAgentOffering).toHaveBeenCalledWith(owner, 'opus', { userId: 'u1' });
   });
 
   it('a rejected binding writes nothing', async () => {
@@ -1163,7 +1172,7 @@ describe('agent policy model by offering (AI model registry W05, #7603)', () => 
       return { offeringId, offeringPartnerId: 'p1' };
     });
     await updateAgent(auth(), 'a1', { offeringId: 'opus' } as never);
-    expect(bindAgentOffering).toHaveBeenCalledWith(owner, 'opus', { userId: 'u1' });
+    expect(bindAgentOffering).toHaveBeenCalledWith(owner, 'opus', { userId: 'u1', planUserSession: true });
     expect(lockedWhenBound).toBeUndefined();
     expect(state.selectFor).toBe('update');
     expect(state.updatedValues).toMatchObject({ offeringId: 'opus', offeringPartnerId: 'p1' });
@@ -1417,6 +1426,6 @@ describe('research create pinning: offeringId (final fix F6)', () => {
     await createAgent(auth(), { orgId: 'o1', partnerId: null }, {
       ...createInput, kind: 'research', mode: 'act', name: 'Org research', offeringId: 'opus',
     } as never);
-    expect(bindAgentOffering).toHaveBeenCalledWith({ orgId: 'o1', partnerId: null }, null, { userId: 'u1' });
+    expect(bindAgentOffering).toHaveBeenCalledWith({ orgId: 'o1', partnerId: null }, null, { userId: 'u1', planUserSession: true });
   });
 });

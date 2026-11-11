@@ -71,6 +71,16 @@ export async function bindAgentOffering(
     surface: 'ai_agents',
     transport: defaultTransport('ai_agents'),
   });
+  // A partner-wide policy has no org, just like partner model assignments.
+  // Its subscription owner may select a model in their interactive session;
+  // use that connection's consent org without changing the policy's scope or
+  // the writer's partner-level permission checks. Org policies keep their
+  // own org context and cannot borrow another organization's subscription.
+  if (owner.orgId === null && candidate.funding === 'chatgpt_plan'
+    && writer.planUserSession && writer.userId === candidate.facts.planOwnerId
+    && candidate.facts.planOrgId) {
+    base.planPrincipal = { userId: writer.userId, orgId: candidate.facts.planOrgId };
+  }
   // `required_permission` is ALWAYS judged at the write, for the writer — even
   // though the run skips it. A write with no human writer holds no permission
   // (eligibilityContextFor's predicate is then always false): fail closed.
