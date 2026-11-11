@@ -2326,7 +2326,7 @@ async function driveSdkLoop(
     orgId: run.orgId,
     surface: 'ai_agents',
     role: modelRole,
-    planConfigured: run.modeAtStart === 'shadow',
+    planConfigured: true,
     subscriptionOnly: run.fundingSource === 'chatgpt_plan',
     ...(requestedOfferingId ? { requested: { offeringId: requestedOfferingId, origin: 'policy' as const } } : {}),
     // A resumed hop is still judged against the run's origin, and keeps its cause.

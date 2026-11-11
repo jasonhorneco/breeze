@@ -435,6 +435,7 @@ describe('remediation_research in the run loop (W2)', () => {
   it('exposes exactly the research floor + submit_suggestions with QUICK limits', async () => {
     seedResearchRun('quick');
     await executeAgentRun(RUN_ID);
+    expect(resolveModel).toHaveBeenCalledWith(expect.objectContaining({ role: 'analysis', planConfigured: true }));
     expect(loadResearchContext).toHaveBeenCalledWith(expect.objectContaining({ orgId: ORG_ID, partnerId: PARTNER_ID, deviceId: DEVICE_ID }));
     expect(new Set(lastQueryOptions?.allowedTools as string[])).toEqual(new Set([
       ...RESEARCH_TOOL_ALLOWLIST.map((name) => `mcp__breeze__${name}`), 'mcp__breeze__submit_suggestions',

@@ -840,7 +840,7 @@ describe('createAndEnqueueAgentRun skip reasons', () => {
       seedAdmissionReads();
       resolveModel.mockResolvedValue(makeResolvedModel('anthropic_byok', { surface: 'ai_agents' }));
       expect(await createAndEnqueueAgentRun(input())).toMatchObject({ created: true });
-      expect(resolveModel).toHaveBeenCalledWith({ partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'ai_agents', role: 'analysis' });
+      expect(resolveModel).toHaveBeenCalledWith({ partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'ai_agents', role: 'analysis', planConfigured: true });
       expect(checkBudget).toHaveBeenCalledWith(ORG_ID, 'partner_key');
       expect(dbMockState.insertValues[0]).toMatchObject({ fundingSource: 'partner_key', admittedOfferingId: 'off-1' });
     });
@@ -1541,6 +1541,7 @@ describe('createAndEnqueueAgentRun — ticket-autonomy forced-shadow LIFT (P2-4 
     expect(result.created).toBe(true);
     const values = dbMockState.insertValues[0] as Record<string, unknown>;
     expect(values).toMatchObject({ triggerKind: 'ticket', modeAtStart: 'act' });
+    expect(resolveModel).toHaveBeenCalledWith(expect.objectContaining({ planConfigured: true }));
   });
 
   it('ticket + act WITHOUT the toggle -> modeAtStart stays shadow (only one gate open)', async () => {
@@ -2860,8 +2861,10 @@ describe('createAndEnqueueAgentRun research-profile admission (AI Suggested Fixe
 
   it('admits a research agent on its own profile against one device', async () => {
     seedResearchAdmissionReads();
+    resolveEffectiveAgentSystem.mockResolvedValue(snapshot({ mode: 'act' }));
     const result = await createAndEnqueueAgentRun(researchInput({ dedupeKey: 'research:r1' }));
     expect(result).toMatchObject({ created: true });
+    expect(resolveModel).toHaveBeenCalledWith(expect.objectContaining({ role: 'analysis', planConfigured: true }));
     expect(dbMockState.insertValues[0]).toMatchObject({ profile: 'remediation_research', deviceId: DEVICE_ID });
   });
 

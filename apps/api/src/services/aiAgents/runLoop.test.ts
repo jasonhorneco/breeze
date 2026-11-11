@@ -1051,6 +1051,7 @@ describe('executeAgentRun', () => {
 
     expect(resolveModel).toHaveBeenCalledWith({
       partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'ai_agents', role: 'analysis',
+      planConfigured: true, subscriptionOnly: false,
       requested: { offeringId: 'off-77', origin: 'policy' },
     });
   });
@@ -1392,6 +1393,7 @@ describe('executeAgentRun', () => {
 
       await executeAgentRun(RUN_ID);
 
+      expect(resolveModel).toHaveBeenCalledWith(expect.objectContaining({ planConfigured: true }));
       expect(revalidateActExecution).toHaveBeenCalledTimes(1);
       const revalidateArgs = revalidateActExecution.mock.calls[0]![0] as Record<string, unknown>;
       expect(revalidateArgs.toolName).toBe('manage_services');
@@ -3137,7 +3139,10 @@ describe('executeAgentRun', () => {
 
     await executeAgentRun(RUN_ID);
 
-    expect(resolveModel).toHaveBeenCalledWith({ partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'ai_agents', role: 'analysis' });
+    expect(resolveModel).toHaveBeenCalledWith({
+      partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'ai_agents', role: 'analysis',
+      planConfigured: true, subscriptionOnly: false,
+    });
     expect(createAgentRunSession).toHaveBeenCalledWith(
       expect.objectContaining({ model: 'claude-default-x' }),
     );
