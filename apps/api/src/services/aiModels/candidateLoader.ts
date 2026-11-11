@@ -45,6 +45,7 @@ import type { GatewayConnectionConfig, GatewayCredential } from './gateway/types
 import { gatewayCandidate } from './gatewayCandidate';
 import { planCandidate } from './planCandidate';
 import { findOfferingIdForModel, getOffering, type Offering } from './offerings';
+import { toolProfileFactsFrom, type ToolProfileFacts } from './toolProfileFacts';
 import {
   effectivePlatformInferenceGeos,
   getPlatformDefaultModel,
@@ -95,6 +96,8 @@ export interface LoadedCandidate {
   limits: { maxInputTokens: number | null; maxOutputTokens: number | null };
   catalogRevisionId?: string;
   configVersion?: number;
+  /** #11393: the offering's tool profile facts; absent = DEFAULT_TOOL_PROFILE_FACTS (no offering row). */
+  toolProfileFacts?: ToolProfileFacts;
 }
 
 /** W01's empty support: nothing selectable, `speed` is always at least `standard`. */
@@ -273,6 +276,7 @@ async function platformCandidate(
     refusalFallbackOfferingId: offering?.refusalFallbackOfferingId ?? null,
     promptProfile: toPromptProfile(row.promptProfile),
     limits: { maxInputTokens: row.maxInputTokens ?? null, maxOutputTokens: row.maxOutputTokens ?? null },
+    ...(offering ? { toolProfileFacts: toolProfileFactsFrom(offering, 'anthropic') } : {}),
   };
 }
 
@@ -430,6 +434,7 @@ async function connectionCandidate(offering: Offering, conn: PartnerAiConnection
     limits,
     catalogRevisionId,
     configVersion: conn.configVersion,
+    toolProfileFacts: toolProfileFactsFrom(offering, 'anthropic'),
   };
 }
 
