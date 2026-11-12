@@ -27,6 +27,9 @@ Last release: **v0.125.0** (2026-10-27).
 
 - Wisp now adds records to its thread working set after successful focal tool calls, keeps pins ahead of recent auto links, and names the authorized record or device being viewed in the turn seed.
 
+- **Tool profiles and context window in the model drawer** (#11393 W05, #11398). Partners can now set a model's tool profile (Auto, Full, Standard, Minimal, Custom) and, on OpenAI-compatible endpoint models, a context window override, under **AI Providers & Models → Models → (model) → Tools and context**. `PATCH /ai/models/offerings/:id` accepts `toolProfile`, `toolAllowlist` and `contextWindowOverride`, behind the same billing-management, partner-wide and MFA gates as the rest of the model record, and audited with the values before and after. A write that would take a required tool away from a feature the model serves is refused (`422 tool_profile_underpowered`). Nothing changes until a partner saves a profile or override: existing rows stay `auto`. A profile change restarts open conversations on that model at their next message (the user is asked to resend). The drawer also shows each feature's verify round trip and states that verify is real traffic billed by the partner's provider (up to about 128k tokens per request on chat Full).
+
+
 ## Migrations
 
 ### Flows W05 (#5215 / #5220, PR D — web, limits and egress audit)

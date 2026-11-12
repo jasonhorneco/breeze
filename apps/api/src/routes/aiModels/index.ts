@@ -15,14 +15,14 @@ import { aiModelOfferingRoutes } from './offerings';
 import { aiModelOrgAssignmentRoutes } from './orgAssignments';
 import { aiModelResidencyRoutes } from './residency';
 import { aiModelUsageRoutes } from './usage';
-import { partnerRead, requirePartnerWide } from './shared';
+import { loadToolProfileCatalog, partnerRead, requirePartnerWide } from './shared';
 
 export const aiModelsRoutes = new Hono();
 aiModelsRoutes.use('*', authMiddleware);
 
 aiModelsRoutes.get('/', ...partnerRead, async (c) => {
   const { partnerId } = requirePartnerWide(c);
-  const snapshot = await buildPartnerModelsSnapshot(partnerId);
+  const snapshot = await buildPartnerModelsSnapshot(partnerId, await loadToolProfileCatalog());
   const reviewProvider = snapshot.connections.some(conn => conn.kind === 'chatgpt_plan')
     ? undefined : codexReviewCatalog(c.get('auth'));
   return c.json(reviewProvider ? { ...snapshot, reviewProvider } : snapshot);
