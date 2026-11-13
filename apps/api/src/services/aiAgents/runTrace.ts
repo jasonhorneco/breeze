@@ -27,6 +27,7 @@ import { projectAlertVerdict } from './alertVerdicts';
 import { projectFleetDesign } from './fleetDesignReport';
 import { projectNarrative } from './narrativeReport';
 import { countFindingsToReview } from './runFindings';
+import { readHumanReviewRequests } from './humanReview';
 import { projectSweep } from './sweepFindings';
 import { projectPatch } from './patchPlan';
 import {
@@ -617,6 +618,7 @@ export function buildRunTrace(
     // contract. `outcome.alertVerdictIntent` (review round 1, IMPORTANT 2)
     // carries the suggestion's intent-creation disposition alongside it.
     alertVerdict: projectAlertVerdict(outcome.alertVerdict, outcome.alertVerdictIntent),
+    humanReviewRequests: readHumanReviewRequests(run.outcome ?? {}),
     // Phase 2 wave P2-2 (scheduled sweeps), Task A7: null for every
     // full/verdict-profile run and for a sweep run that has not produced
     // findings — see `projectSweep`'s own safe-projection contract. The raw

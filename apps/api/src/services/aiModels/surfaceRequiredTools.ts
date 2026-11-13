@@ -7,12 +7,12 @@
  * any provider call. Exposure only; authority is unchanged.
  */
 import type { AiAgentRunProfile, AiSurface } from '@breeze/shared';
-import { outcomeToolsForRun } from '../aiAgents/outcomeTools';
+import { outcomeToolsForRun, type OutcomeToolRunRef } from '../aiAgents/outcomeTools';
 import type { ToolExposure } from './toolExposure';
 
 export const TOOL_PROFILE_UNDERPOWERED = 'tool_profile_underpowered' as const;
 
-export interface RunFloorRef { profile: AiAgentRunProfile; taskId?: string | null }
+export interface RunFloorRef extends OutcomeToolRunRef {}
 
 /** Registry tools a run profile cannot do its job without, beyond its outcome tools. */
 const REQUIRED_BY_RUN_PROFILE: Readonly<Partial<Record<AiAgentRunProfile, readonly string[]>>> = {

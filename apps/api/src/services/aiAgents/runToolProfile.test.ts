@@ -23,6 +23,17 @@ function input(over: Partial<RunToolProfileInput> = {}): RunToolProfileInput {
 }
 
 describe('applyRunToolProfile (#11394)', () => {
+  it('retains the selected human-review outcome under Custom without adding action authority', () => {
+    const handoff = 'mcp__breeze__request_human_review';
+    const result = applyRunToolProfile(input({
+      run: { profile: 'full', triggerKind: 'alert', alertId: 'alert-1' },
+      exposedNames: [...TROUBLESHOOT.map((n) => `mcp__breeze__${n}`), handoff],
+      facts: facts({ toolProfile: 'custom', toolAllowlist: { domains: [], tools: TROUBLESHOOT } }),
+    }));
+    expect(result.exposedNames).toContain(handoff);
+    expect(result.exposure.extraToolNames).toContain('request_human_review');
+    expect(result.onlyTools).not.toContain('request_human_review');
+  });
   it('offline resolution can measure an underpowered profile, while runtime admission refuses it', () => {
     const restricted = input({ facts: facts({ toolProfile: 'minimal' }) });
     expect(resolveRunToolProfile(restricted).exposure.profile).toBe('minimal');

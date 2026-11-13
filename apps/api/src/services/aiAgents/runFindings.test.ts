@@ -77,10 +77,20 @@ function baseRun(overrides: Partial<RunTraceRunInput> = {}): RunTraceRunInput {
  */
 function webRuleOverDetailDto(detail: ReturnType<typeof buildRunTrace>): number {
   return (detail.sweep?.findings.length ?? 0)
+    + (detail.humanReviewRequests?.length ?? 0)
     + detail.trace.filter((entry) => entry.kind === 'proposed').length;
 }
 
 describe('countFindingsToReview', () => {
+  it('keeps the native count and safe detail handoff aligned without an action intent', () => {
+    const outcome = { runVerdict: 'no_action', humanReviewRequests: [{ reason: 'Inspect the evidence.', nextSteps: [] }] };
+    const detail = buildRunTrace(baseRun({ outcome }), null, null, [], []);
+    expect(countFindingsToReview(outcome)).toBe(1);
+    expect(detail.humanReviewRequests).toEqual(outcome.humanReviewRequests);
+    expect(detail.findingsToReview).toBe(1);
+    expect(detail.runVerdict).toBe('no_action');
+    expect(detail.intents).toEqual([]);
+  });
   it('counts sweep findings plus proposed trace entries and excludes denied ones', () => {
     expect(countFindingsToReview(MIXED_OUTCOME)).toBe(3);
   });

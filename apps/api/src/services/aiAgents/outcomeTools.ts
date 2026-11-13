@@ -78,8 +78,10 @@ import {
   validateSubmitTaskStep,
 } from './tools/submitTaskStep';
 import { validateResearchSubmission, type ResearchToolRefs } from './researchSubmission';
+import { humanReviewRequestSchema, humanReviewRequestShape, type HumanReviewRequest } from '@breeze/shared';
 
 export const OUTCOME_TOOL_NAMES = [
+  'request_human_review',
   'submit_alert_verdict', 'submit_sweep_findings', 'submit_narrative', 'submit_ticket_proposal',
   // Fleet Designer W01 (#5651) — the fifth profile-mapped outcome tool. See
   // `outcomeToolsForProfile`'s `'design'` arm below.
@@ -124,6 +126,7 @@ export type AssessmentToolInput =
   | RaiseConcernInput | UpdateConcernInput | NudgeInput | ProposeActionInput | RequestSpecialistInput;
 
 export const OUTCOME_MCP_TOOL_NAMES: Record<OutcomeToolName, string> = {
+  request_human_review: 'mcp__breeze__request_human_review',
   submit_task_step: 'mcp__breeze__submit_task_step',
   submit_alert_verdict: 'mcp__breeze__submit_alert_verdict',
   submit_sweep_findings: 'mcp__breeze__submit_sweep_findings',
@@ -180,11 +183,16 @@ export function isOutcomeTool(toolName: string): toolName is OutcomeToolName {
  * step under, say, the `verdict` profile should get BOTH, not a silent
  * replacement.
  */
-export function outcomeToolsForRun(run: {
+export interface OutcomeToolRunRef {
   profile: AiAgentRunProfile;
   taskId?: string | null;
-}): OutcomeToolName[] {
+  triggerKind?: string;
+  alertId?: string | null;
+}
+
+export function outcomeToolsForRun(run: OutcomeToolRunRef): OutcomeToolName[] {
   const base = outcomeToolsForProfile(run.profile);
+  if (run.profile === 'full' && run.triggerKind === 'alert' && run.alertId) base.push('request_human_review');
   return run.taskId ? [...base, 'submit_task_step'] : base;
 }
 
@@ -250,6 +258,7 @@ export function outcomeToolsForProfile(profile: AiAgentRunProfile): OutcomeToolN
   }
 }
 
+export function validateOutcomeToolInput(toolName: 'request_human_review', input: unknown): HumanReviewRequest;
 export function validateOutcomeToolInput(toolName: 'submit_alert_verdict', input: unknown): AlertVerdictOutcome;
 export function validateOutcomeToolInput(toolName: 'submit_sweep_findings', input: unknown): SweepFindingsOutcome;
 /**
@@ -344,12 +353,14 @@ export function validateOutcomeToolInput(toolName: 'request_specialist', input: 
 export function validateOutcomeToolInput(
   toolName: OutcomeToolName, input: unknown, refs?: FleetDesignOutcomeRefs | PatchPlanToolRefs | ResearchToolRefs,
 ): AlertVerdictOutcome | SweepFindingsOutcome | NarrativeOutcome | TicketTriageProposal | SubmitTaskStepPayload
-  | FleetDesignOutcome | PatchPlanOutcome | AnalysisOutcome | ResearchOutcome | AssessmentToolInput;
+  | FleetDesignOutcome | PatchPlanOutcome | AnalysisOutcome | ResearchOutcome | AssessmentToolInput | HumanReviewRequest;
 export function validateOutcomeToolInput(
   toolName: OutcomeToolName, input: unknown, refs?: FleetDesignOutcomeRefs | PatchPlanToolRefs | ResearchToolRefs,
 ): AlertVerdictOutcome | SweepFindingsOutcome | NarrativeOutcome | TicketTriageProposal | SubmitTaskStepPayload
-  | FleetDesignOutcome | PatchPlanOutcome | AnalysisOutcome | ResearchOutcome | AssessmentToolInput {
+  | FleetDesignOutcome | PatchPlanOutcome | AnalysisOutcome | ResearchOutcome | AssessmentToolInput | HumanReviewRequest {
   switch (toolName) {
+    case 'request_human_review':
+      return humanReviewRequestSchema.parse(input);
     case 'record_concern':
       return raiseConcernSchema.parse(input);
     case 'update_concern':
@@ -857,6 +868,16 @@ export function buildOutcomeSdkTools(
 ): SdkTool[] {
   return names.map((name) => {
     switch (name) {
+      case 'request_human_review':
+        return tool(
+          'request_human_review',
+          'Record one request for a technician to review this alert. Call once when evidence is inconclusive or a human must decide the next step. This records inert text only: it does not execute actions or create an executable approval. Concrete script or action proposals still use the normal proposal tools.',
+          humanReviewRequestShape,
+          async (input) => {
+            humanReviewRequestSchema.parse(input);
+            return { content: [{ type: 'text', text: JSON.stringify({ status: 'recorded' }) }] };
+          },
+        ) as SdkTool;
       case 'submit_task_step':
         // Same construction-site cast as the four below, same reason. And the
         // same posture: validate-only, static ack, no DB, no execution. A

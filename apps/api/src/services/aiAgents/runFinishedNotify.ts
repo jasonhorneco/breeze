@@ -51,6 +51,7 @@ import { ticketDrafts } from '../../db/schema/ticketDrafts';
 import { deliverNarrativeEmails } from '../reportNarrativeDelivery';
 import { createNotification } from '../userNotifications';
 import { resolveRecipientUserIds } from './recipients';
+import { readHumanReviewRequests } from './humanReview';
 
 const RUN_VERDICTS: ReadonlySet<AgentRunVerdict> = new Set([
   'remediated', 'needs_attention', 'partial', 'no_action',
@@ -504,6 +505,7 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
     return;
   }
   const { run, agent } = loaded;
+  const humanReview = readHumanReviewRequests(run.outcome ?? {}).length > 0;
 
   if (!TERMINAL_STATUSES.has(run.status)) {
     console.warn('[runFinishedNotify] run is not (yet) in a terminal status — skipping', {
@@ -511,6 +513,8 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
     });
     return;
   }
+  // Routine verdict badges stay quiet. Only an explicit, validated handoff notifies.
+  if (run.profile === 'verdict' && !humanReview) return;
 
   // Task A7 / review fix (#4189): a CLEAN sweep is silent. A sweep is a
   // recurring, unattended job — a daily baseline across a 40-org partner that
@@ -584,6 +588,7 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
     && run.status === 'completed'
     && run.intentIds.length === 0
     && readRunVerdict(run.outcome ?? {}) === 'no_action'
+    && !humanReview
   ) {
     console.info('[runFinishedNotify] alert-triggered full run ended no_action with nothing proposed — no notification', {
       runId, orgId: run.orgId, status: run.status,
@@ -645,7 +650,9 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
   const triage = run.profile === 'triage';
   const ticketLabel = triage ? await loadTicketLabel(run.ticketId ?? null, run.orgId) : null;
   const triageAutonomous = triage && run.status === 'completed' && run.intentIds.length > 0;
-  const title = design
+  const title = humanReview
+    ? `Human review needed — ${agent.name}`
+    : design
     ? `Fleet Design ready${orgName ? ` — ${orgName}` : ''}`
     : narrative
       ? `Weekly narrative ready${orgName ? ` — ${orgName}` : ''}`
@@ -659,7 +666,9 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
           : (triage && ticketLabel)
             ? `Ticket #${ticketLabel} triaged — ${agent.name}`
             : verdictAwareTitle(agent.name, verdict);
-  const baseMessage = design
+  const baseMessage = humanReview
+    ? `${agent.name} requested human review. Open the run for evidence and suggested next steps.`
+    : design
     ? `${agent.name}: ${firstLine || run.status}`
     : narrative
       ? narrative.headline || `${agent.name}: ${firstLine || run.status}`
@@ -686,7 +695,7 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
   // `computeRunVerdict` can only land `no_action` (it executes nothing), so
   // without this branch a plan naming a critical gap would arrive at normal
   // priority.
-  const priority = (design || narrative)
+  const priority = humanReview ? 'high' : (design || narrative)
     ? null
     : sweep
       ? (sweep.critical > 0 ? 'high' : null)
@@ -741,6 +750,7 @@ export async function deliverRunFinishedNotifications(runId: string): Promise<vo
           status: run.status,
           executedActionCount,
           verdict,
+          ...(humanReview ? { humanReview: true } : {}),
           ...(actSummary.length > 0 ? { actSummary } : {}),
           // `proposals` is the run's own pending-intent count: for a sweep
           // run every entry in `intent_ids` came from a converted proposal

@@ -1,4 +1,5 @@
 import type { AiApprovalScope, AiToolStatus } from './ai';
+import type { HumanReviewRequest } from '../validators/aiAgentHumanReview';
 import type { AiAgentRunFleetDesignDto } from './fleetDesign';
 import type { AiAgentRunPatchDto } from './aiPatchPlan';
 import type { AiRunArtifactDto } from './aiArtifacts';
@@ -707,6 +708,8 @@ export interface AiAgentRunDetailDto {
    * caller before that lands sees `null` unconditionally.
    */
   alertVerdict: AiAgentRunAlertVerdictDto | null;
+  /** Additive, display-only handoff. Older servers may omit it; no action authority. */
+  humanReviewRequests?: HumanReviewRequest[];
   /**
    * Phase 2 wave P2-2 (scheduled sweeps) — the findings this run produced,
    * for a `sweep`-profile run that reached a sweep outcome. Null for every

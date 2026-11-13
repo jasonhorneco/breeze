@@ -107,6 +107,27 @@ beforeEach(() => {
 });
 
 describe('deliverRunFinishedNotifications', () => {
+  it.each(['full', 'verdict'])('surfaces a typed %s human handoff using native recipients, priority and retry dedupe', async (profile) => {
+    queueRows('ai_agent_runs', [{ ...baseRun, profile, triggerKind: 'alert',
+      outcome: { runVerdict: 'no_action', humanReviewRequests: [{ reason: 'Stored evidence is inconclusive.', nextSteps: ['Review sensor history.'] }] } }]);
+    queueRows('ai_agents', [baseAgent]);
+    resolveRecipientUserIds.mockResolvedValue([USER_A]);
+    await deliverRunFinishedNotifications(RUN_ID);
+    expect(createNotification).toHaveBeenCalledTimes(1);
+    expect(createNotification.mock.calls[0]![0]).toMatchObject({
+      title: 'Human review needed — Front Desk Triage', priority: 'high',
+      link: `/ai-agents/runs/${RUN_ID}`, dedupeKey: `agent-run:${RUN_ID}`,
+      metadata: { runId: RUN_ID, humanReview: true, intentIds: [] },
+    });
+    expect(JSON.stringify(createNotification.mock.calls[0]![0])).not.toContain('Review sensor history.');
+  });
+  it('keeps routine verdicts silent and does not infer human attention from summary words', async () => {
+    queueRows('ai_agent_runs', [{ ...baseRun, profile: 'verdict', triggerKind: 'alert', summary: 'needs human review', outcome: { runVerdict: 'no_action' } }]);
+    queueRows('ai_agents', [baseAgent]);
+    await deliverRunFinishedNotifications(RUN_ID);
+    expect(createNotification).not.toHaveBeenCalled();
+    expect(resolveRecipientUserIds).not.toHaveBeenCalled();
+  });
   it('creates one notification per resolved recipient with the structured metadata shape', async () => {
     queueRows('ai_agent_runs', [baseRun]);
     queueRows('ai_agents', [baseAgent]);

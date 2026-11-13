@@ -43,6 +43,7 @@ import { persistTicketTriage } from './ticketTriageFindings';
 import { isTriageProfile } from './triageProfile';
 import { isVerdictProfile } from './verdictProfile';
 import type { LoopResult, RunContext } from './runLoopTypes';
+import { captureHumanReviewRequest } from './humanReview';
 
 // Wisp W05b — the assessment finalizer lives in its own file (this one is
 // already > 600 lines); re-exported so `executeAgentRun` keeps one import path.
@@ -130,6 +131,9 @@ export async function finalizeVerdict(ctx: RunContext, result: LoopResult): Prom
       outcome.alertVerdict,
       result.agentAuth,
     );
+    if (outcome.alertVerdict.classification === 'needs_human') {
+      captureHumanReviewRequest(outcome, { reason: outcome.alertVerdict.rationale, nextSteps: [] });
+    }
     if (intentId) result.intentIds.push(intentId);
     // Review round 1 (IMPORTANT 2): only recorded when there was a
     // `suggestedAction` to report on at all — see `AlertVerdictIntentInfo`'s

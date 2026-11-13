@@ -276,6 +276,17 @@ beforeEach(() => {
 });
 
 describe('RunDetailPage', () => {
+  it('renders human review as inert text, retaining the native findings badge and no action approval', async () => {
+    mockEndpoints({ detail: { ...RUN_DETAIL, runVerdict: 'no_action', findingsToReview: 1, trace: [], intents: [],
+      humanReviewRequests: [{ reason: '<script>not executable</script>', nextSteps: ['Inspect stored sensor history.'] }] } });
+    render(<RunDetailPage runId="run-1" />);
+    const panel = await screen.findByTestId('ai-agent-run-human-review');
+    expect(panel).toHaveTextContent('<script>not executable</script>');
+    expect(panel.querySelector('script')).toBeNull();
+    expect(panel).toHaveTextContent('Inspect stored sensor history.');
+    expect(within(panel).queryByRole('button')).toBeNull();
+    expect(screen.getByTestId('run-detail-findings-badge')).toBeInTheDocument();
+  });
   it('loads and renders run header fields', async () => {
     mockEndpoints();
     render(<RunDetailPage runId="run-1" />);

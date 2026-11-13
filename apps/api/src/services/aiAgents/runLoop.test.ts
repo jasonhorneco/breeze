@@ -2710,6 +2710,34 @@ describe('executeAgentRun', () => {
     expect(compiled(alertSelect?.where)).toContain('"org_id"');
   });
 
+  it('loads current lifecycle scalars into the actual runner task prompt', async () => {
+    seedRows();
+    dbMockState.rowQueues.alerts = [[{
+      id: ALERT_ID, title: 'Monitor breach', severity: 'medium', message: 'Previous breach',
+      status: 'resolved', triggeredAt: new Date('2026-01-02T10:00:00Z'), resolvedAt: new Date('2026-01-02T10:05:00Z'),
+    }]];
+    await executeAgentRun(RUN_ID);
+    const prompt = String((queryMock.mock.calls[0]![0] as { prompt: unknown }).prompt);
+    expect(prompt).toContain(`Alert id: ${ALERT_ID}`);
+    expect(prompt).toContain('Current alert status: resolved');
+    expect(prompt).toContain('Resolved at: 2026-01-02T10:05:00.000Z');
+  });
+
+  it('records a single non-executable human handoff through the real pre/post hooks', async () => {
+    seedRows();
+    scriptQuery({ toolCalls: [
+      { tool: 'request_human_review', input: { reason: 'Stored evidence is inconclusive.', nextSteps: ['Inspect the stored history.'] } },
+      { tool: 'request_human_review', input: { reason: 'Do not replace the first request.', nextSteps: [] } },
+    ] });
+    await executeAgentRun(RUN_ID);
+    expect(preVerdicts[0]).toMatchObject({ allowed: true });
+    expect(preVerdicts[1]).toMatchObject({ allowed: false });
+    const outcome = finalTransition()!.patch.outcome as Record<string, unknown>;
+    expect(outcome.humanReviewRequests).toEqual([{ reason: 'Stored evidence is inconclusive.', nextSteps: ['Inspect the stored history.'] }]);
+    expect(outcome.proposedActions).toEqual([]);
+    expect(outcome.executedActions).toEqual([]);
+  });
+
   it('a device that has moved to another org is not fed into the prompt', async () => {
     seedRows();
     // The org-pinned read finds nothing after the move.
@@ -3741,6 +3769,18 @@ describe('verdict profile in the run loop (P2-1)', () => {
 
   // Review fix (fix round 1, MINOR 10): the badge is the surface for a
   // verdict run, and fix-watches are act-lane only — neither applies.
+  it('maps needs_human verdicts to a structured native handoff before finish/notification', async () => {
+    seedRows({ effective: policy({ toolAllowlist: [] }), profile: 'verdict' });
+    scriptQuery({ toolCalls: [{ tool: 'submit_alert_verdict', input: {
+      classification: 'needs_human', confidence: 0.7, rationale: 'The stored source needs technician review.',
+    } }] });
+    await executeAgentRun(RUN_ID);
+    const outcome = finalTransition()!.patch.outcome as Record<string, unknown>;
+    expect(outcome.humanReviewRequests).toEqual([{ reason: 'The stored source needs technician review.', nextSteps: [] }]);
+    expect(resolveRecipientUserIds).toHaveBeenCalled();
+    expect(scheduleFixWatch).not.toHaveBeenCalled();
+  });
+
   it('finishRun skips run-finished notifications and fix-watch scheduling for a verdict-profile run', async () => {
     seedRows({ effective: policy({ toolAllowlist: [] }), profile: 'verdict' });
     scriptQuery({ assistantText: 'Verdict recorded.' });

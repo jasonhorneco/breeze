@@ -58,6 +58,7 @@ import { AI_AGENT_RUN_SUMMARY_EXCERPT_MAX_CHARS } from '@breeze/shared';
  * in one edit, which is the point.
  */
 export const FINDINGS_TO_REVIEW_OUTCOME_PATHS: readonly (readonly string[])[] = [
+  ['humanReviewRequests'],
   ['sweepFindings', 'findings'],
   ['proposedActions'],
   // AI patch agent W01 (#5747) — a patch plan's items are the work a human

@@ -165,6 +165,9 @@ import {
   startToolExecution,
 } from './executionLedger';
 import { deliverRunFinishedNotifications } from './runFinishedNotify';
+import { alertTriggerContext } from './alertLifecycle';
+import { captureHumanReviewRequest, readHumanReviewRequests } from './humanReview';
+import type { OutcomeToolRunRef } from './outcomeTools';
 import { transitionRunStatus } from './runService';
 // jobs/, not services/ — the durable retry lane for a notify failure (Task 6,
 // #3826). BullMQ-touching but harmless to import here: `enqueueAgentNotifyRetry`
@@ -443,11 +446,15 @@ async function loadRunContext(runId: string): Promise<RunContext | null> {
     let alert: RunContext['alert'] = null;
     if (run.alertId) {
       const [row] = await db
-        .select({ title: alerts.title, severity: alerts.severity, message: alerts.message })
+        .select({
+          id: alerts.id, status: alerts.status,
+          triggeredAt: alerts.triggeredAt, resolvedAt: alerts.resolvedAt,
+          title: alerts.title, severity: alerts.severity, message: alerts.message,
+        })
         .from(alerts)
         .where(and(eq(alerts.id, run.alertId), eq(alerts.orgId, run.orgId)))
         .limit(1);
-      alert = row ?? null;
+      alert = row ? { ...row, observedAt: new Date() } : null;
       if (!row) {
         console.warn('[aiAgentRunLoop] run alert is not (or no longer) in the run org', {
           runId, orgId: run.orgId, alertId: run.alertId,
@@ -1238,6 +1245,9 @@ export function createAgentRunPreToolUse(args: {
         outcome.deniedActions.push({ tool: toolName, reason });
         return { allowed: false, error: reason };
       }
+      if (toolName === 'request_human_review' && outcome.humanReviewRequests?.length) {
+        return { allowed: false, error: 'Human review already recorded; the first request is final.' };
+      }
       try {
         validateOutcomeToolInput(toolName, input, toolName === 'submit_patch_plan' ? patch : toolName === 'submit_suggestions' ? research : design);
       } catch (e) {
@@ -1541,6 +1551,9 @@ export function createAgentRunPostToolUse(args: {
       // pre-hook refused can never still land in the outcome via this path.
       if (!isError && outcomeToolsForRun(run).includes(toolName)) {
         switch (toolName) {
+          case 'request_human_review':
+            captureHumanReviewRequest(outcome, input);
+            break;
           case 'submit_alert_verdict':
             outcome.alertVerdict = validateOutcomeToolInput(toolName, input);
             break;
@@ -1982,7 +1995,10 @@ function promptContext(ctx: RunContext, effective: AiAgentPolicy): AgentRunPromp
       ? analysisPromptContext(ctx.run.triggerRef, ctx.run.stagedInputs)
       : null,
     agent: { name: ctx.agent.name, kind: ctx.agent.kind },
-    run: { id: ctx.run.id, mode: ctx.run.modeAtStart, triggerKind: ctx.run.triggerKind },
+    run: {
+      id: ctx.run.id, mode: ctx.run.modeAtStart, triggerKind: ctx.run.triggerKind,
+      alertEvent: alertTriggerContext(ctx.run),
+    },
     device: ctx.device
       ? { id: ctx.device.id, hostname: ctx.device.hostname, osType: ctx.device.osType }
       : null,
@@ -2109,7 +2125,7 @@ export function declaredFullRunToolExposure(agentAllowlist: readonly string[]): 
 }
 
 /** `triggerRef` is read only by `remediation_research` (its depth); optional so every other call site stays valid. */
-type RunProfileRef = { profile: AiAgentRunProfile; triggerRef?: Record<string, unknown> | null };
+type RunProfileRef = OutcomeToolRunRef & { triggerRef?: Record<string, unknown> | null };
 
 /**
  * The run's effective limits: each narrow profile pins its own turn, budget
@@ -2221,7 +2237,10 @@ export function resolveRunToolExposure(
     ? new Set(exposureList.map((name) => name.split(':')[0]!).filter((name) => !isOutcomeTool(name)))
     : undefined;
 
-  return { exposedNames, onlyTools };
+  return {
+    exposedNames: [...new Set([...exposedNames, ...outcomeToolsForRun(run).map((name) => OUTCOME_MCP_TOOL_NAMES[name])])],
+    onlyTools,
+  };
 }
 
 async function driveSdkLoop(
@@ -3827,7 +3846,8 @@ async function finishRun(
   // notifies nor watches.
   // Wisp W05b: an assessment runs on every wake-up and talks to its person
   // only through nudges (spec §7.4 discipline) — never a run-finished notice.
-  const notifies = !isVerdictProfile(ctx.run) && !isResearchProfile(ctx.run) && !isAssessmentProfile(ctx.run);
+  const notifies = (!isVerdictProfile(ctx.run) || readHumanReviewRequests(result.outcome as unknown as Record<string, unknown>).length > 0)
+    && !isResearchProfile(ctx.run) && !isAssessmentProfile(ctx.run);
   // Fleet Designer W01 (#5651): `watches` gains the design exclusion, same
   // reasoning as sweep/narrative/triage — a design run executes nothing (its
   // tool floor is read-only and `designLimits` pins `maxActionsPerRun: 0`),

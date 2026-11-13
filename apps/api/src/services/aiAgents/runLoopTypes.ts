@@ -1,5 +1,6 @@
-import type { AiFundingSource, AnalysisOutcome, AssessmentOutcome, RemediationTriggerKind, ResearchOutcome } from '@breeze/shared';
+import type { AiFundingSource, AnalysisOutcome, AssessmentOutcome, RemediationTriggerKind, ResearchOutcome, HumanReviewRequest } from '@breeze/shared';
 import type { ResearchRunContext } from './researchContext';
+import type { AlertLifecycleContext } from './alertLifecycle';
 import type { AssessmentRunContext } from '../wisp/assessmentTypes';
 import type { RunProvenFixes } from '../fixMemory/runMemory';
 /**
@@ -151,6 +152,8 @@ export interface OutcomeExecutedAction {
 export type TicketProposalOutcome = TicketTriageProposal;
 
 export interface AgentRunOutcome {
+  /** At most one validated, non-executable request for a technician's attention. */
+  humanReviewRequests?: HumanReviewRequest[];
   /**
    * The model's `submit_task_step` submission on a task-linked run (#5205 W06).
    *
@@ -462,7 +465,7 @@ export interface RunContext {
    */
   orgName?: string | null;
   device: { id: string; siteId: string; hostname: string; osType: string } | null;
-  alert: { title: string; severity: string; message: string | null } | null;
+  alert: AlertLifecycleContext | null;
   /** Bounded, sanitized ticket context (Task 4) — `null` for every non-ticket
    *  run, and for a ticket run whose ticket has vanished/moved org (same
    *  "moved/deleted reads as absent" posture `device`/`alert` already use). */

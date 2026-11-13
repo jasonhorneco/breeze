@@ -30,6 +30,10 @@
         "badge_one": "{{count}} finding to review",
         "badge_other": "{{count}} findings to review"
       },
+      "humanReview": {
+        "title": "Human review needed",
+        "hint": "Review the evidence and suggested checks below. This handoff does not authorize an action."
+      },
       "evidence": {
         "labels": {
           "mountPoint": "Drive",

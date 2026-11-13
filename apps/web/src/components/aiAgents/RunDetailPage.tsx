@@ -1970,6 +1970,26 @@ export default function RunDetailPage({ runId }: RunDetailPageProps) {
       {/* Phase 2 wave P2-2 (#4189) — a `sweep`-profile run's findings. Null
           for every `full`/`verdict`-profile run, so the whole section is
           absent rather than empty for them. */}
+      {(run.humanReviewRequests?.length ?? 0) > 0 && (
+        <section data-testid="ai-agent-run-human-review" className="rounded-lg border bg-card p-4">
+          <h2 className="text-sm font-semibold">
+            {t('aiAgentsRuns.detail.humanReview.title', { defaultValue: 'Human review needed' })}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('aiAgentsRuns.detail.humanReview.hint', { defaultValue: 'Review the evidence and suggested checks below. This handoff does not authorize an action.' })}
+          </p>
+          {run.humanReviewRequests?.map((review, index) => (
+            <div key={index} className="mt-3 max-w-prose break-words text-sm">
+              <p className="whitespace-pre-wrap">{review.reason}</p>
+              {review.nextSteps.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {review.nextSteps.map((step, stepIndex) => <li key={stepIndex}>{step}</li>)}
+                </ul>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
       {run.sweep && (
         <section data-testid="ai-agent-run-sweep" className="rounded-lg border bg-card p-4">
           <h2 className="text-sm font-semibold">{t('aiAgentsPage.runs.sweep.title')}</h2>
