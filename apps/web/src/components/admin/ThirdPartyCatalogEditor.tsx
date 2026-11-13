@@ -79,7 +79,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
       data-testid="catalog-editor-modal"
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
     >
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-card text-card-foreground rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <h2 className="text-lg font-medium">
             {editing ? t('admin.thirdPartyCatalogEditor.title.edit') : t('admin.thirdPartyCatalogEditor.title.add')}
@@ -87,7 +87,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
           <button
             data-testid="catalog-editor-close"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-700"
+            className="text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -110,7 +110,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
               disabled={editing}
             />
             {editing && (
-              <p className="text-xs text-gray-500 mt-1">{t('admin.thirdPartyCatalogEditor.packageIdLocked')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('admin.thirdPartyCatalogEditor.packageIdLocked')}</p>
             )}
           </div>
 
@@ -202,7 +202,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
           <button
             data-testid="catalog-editor-cancel"
             onClick={onClose}
-            className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
+            className="px-3 py-2 text-sm text-foreground hover:bg-muted/50 rounded"
           >
             {t('admin.thirdPartyCatalogEditor.cancel')}
           </button>
