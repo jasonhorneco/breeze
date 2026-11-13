@@ -278,9 +278,8 @@ describe('submit_sweep_findings outcome tool (P2-2)', () => {
     // which keeps the original "no orphan tool" property intact rather than
     // carving out an unchecked exception.
     const byProfile = AI_AGENT_RUN_PROFILES.flatMap((profile) => outcomeToolsForProfile(profile));
-    expect([...byProfile].sort()).toEqual(
-      [...OUTCOME_TOOL_NAMES].filter((name) => name !== 'submit_task_step').sort(),
-    );
+    const runSelected = outcomeToolsForRun({ profile: 'full', taskId: 'task-1', triggerKind: 'alert', alertId: 'alert-1' });
+    expect([...byProfile, ...runSelected].sort()).toEqual([...OUTCOME_TOOL_NAMES].sort());
 
     const byTaskLinkage = outcomeToolsForRun({ profile: 'full', taskId: 'task-1' });
     expect(byTaskLinkage).toEqual(['submit_task_step']);
