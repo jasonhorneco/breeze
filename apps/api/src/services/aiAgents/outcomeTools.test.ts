@@ -284,7 +284,7 @@ describe('submit_sweep_findings outcome tool (P2-2)', () => {
     const byTaskLinkage = outcomeToolsForRun({ profile: 'full', taskId: 'task-1' });
     expect(byTaskLinkage).toEqual(['submit_task_step']);
 
-    expect([...new Set([...byProfile, ...byTaskLinkage])].sort())
+    expect([...new Set([...byProfile, ...byTaskLinkage, ...runSelected])].sort())
       .toEqual([...OUTCOME_TOOL_NAMES].sort());
   });
 
