@@ -45,7 +45,23 @@ operations checklist and release ledger rather than copying those into Git.
 
 ## Current boundary
 
-The administration contrast repair is accepted as a web-only update. Strict
-`query_devices` argument validation is staged for the next API batch. The newer
-upstream AI context/tool-profile work still needs its prerequisite changes and
-qualification; this fork does not claim that it is already deployed.
+The administration contrast repair is accepted as a web-only update. The API
+retry repair, strict `query_devices` validation and upstream context/static-tool
+prerequisites are accepted separately. The five upstream tool-profile waves
+(#11680, #11761, #11786, #11795 and #11801) are being qualified on a feature
+branch; their presence in source does not establish deployment or live acceptance.
+
+The profile backport uses this release's installed registry. It omits the absent
+organization-summary tool and keeps immutable script proposal/read tools in the
+standard profile. This release's troubleshooting agents use the `full` run
+profile, so its command/script floor is attached there; revisit that mapping
+when upgrading to upstream's separate troubleshooting run profile. Offline prefix
+measurement resolves exposure without dispatch; runtime admission still checks
+the required tools and window before any inference. Full-prompt references were
+captured from the accepted baseline, rather than copied from newer upstream code.
+
+Subscription candidates carry the same profile and context facts as other
+gateway models. Schema compaction affects advertising only; original argument
+validation remains in force. Query reuse includes saved reasoning effort and
+tool-exposure identity. Chat approval mode follows native configuration, with
+pause retaining its ordinary per-step override for every funding source.
