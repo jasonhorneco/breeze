@@ -279,7 +279,7 @@ export default function ThirdPartyCatalog() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('admin.thirdPartyCatalog.searchPlaceholder')}
-            className="w-full pl-9 pr-3 py-2 border rounded text-sm"
+            className="w-full pl-9 pr-3 py-2 border rounded text-sm bg-background text-foreground dark:[color-scheme:dark]"
           />
         </div>
         <label className="flex items-center gap-2 text-sm">
