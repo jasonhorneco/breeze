@@ -1249,7 +1249,7 @@ describe('runPreFlightChecks — Wisp thread re-seed (Review Focus 1)', () => {
     const args = mockBuildSystemPrompt.mock.calls.at(-1)!;
     expect(args[3]).toBe(CEILING);
     expect(args[4]).toMatchObject({ promptMode: 'constrained' });
-    expect(wisp.wispSeedForSession).toHaveBeenCalledWith(GRANT, auth, CEILING, undefined, expect.anything());
+    expect(wisp.wispSeedForSession).toHaveBeenCalledWith(GRANT, auth, CEILING, undefined);
   });
 
   it('#11395: a constrained Wisp turn WITH a page passes both the ceiling and the exposure', async () => {

@@ -21,7 +21,7 @@
  */
 import type { AiAgentRunProfile } from '@breeze/shared';
 import { breezeServerTools, chatToolDomain, listChatSurfaceToolNames } from '../../aiAgentSdkTools';
-import { applyRunToolProfile } from '../../aiAgents/runToolProfile';
+import { applyRunToolProfile, resolveRunToolProfile } from '../../aiAgents/runToolProfile';
 import { buildOutcomeSdkTools } from '../../aiAgents/outcomeTools';
 import { composeConstrainedSystemPrompt, composeStaticSystemPrompt } from '../../aiToolIndex';
 import { allowedToolsUnder, finalizeSessionToolExposure, ToolProfileUnderpoweredError } from '../../aiModels/sessionToolExposure';
@@ -112,7 +112,7 @@ export function advertisedRequestForFacts(
 
   if (kind === 'ai_agents') {
     const run = { profile: surface.agentProfile! as AiAgentRunProfile };
-    const applied = applyRunToolProfile({
+    const applied = (opts.strict ? applyRunToolProfile : resolveRunToolProfile)({
       run, facts, exposedNames: surface.allowedTools, onlyTools: surface.onlyTools,
       flowToolNames: [], offeringId: null, domainOf: chatToolDomain,
     });

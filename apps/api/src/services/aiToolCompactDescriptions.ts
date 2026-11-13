@@ -19,6 +19,8 @@
  * the curated lists' (toolProfiles.ts), reviewed together.
  */
 export const COMPACT_TOOL_DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
+  propose_script: 'Author an immutable script proposal for static scanning and independent model review. Use when no library script fits. Execution requires human approval.',
+  get_script_proposal: 'Read a script proposal, static scan, independent review, human decision, execution and verification results, and its approvals page.',
   analyze_disk_usage: 'Explain what is using disk space on a device from its latest scan; refresh=true runs a new scan (needs execute permission).',
   analyze_metrics: 'Time-series CPU, RAM, disk and network metrics for one device, with time range and aggregation. The summary covers the whole window.',
   analyze_screen: 'Screenshot a device and describe what is on screen, to troubleshoot what the user sees. Refused where remote access needs user consent.',

@@ -477,13 +477,13 @@ describe('runPreFlightChecks', () => {
 
   it('resolves the stored session turn on the chat surface for the requesting user', async () => {
     await runPreFlightChecks('session-1', 'hello', auth);
-    expect(mockResolveSessionTurn).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'chat', userId: auth.user.id });
+    expect(mockResolveSessionTurn).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'chat', userId: auth.user.id, planUserSession: false });
   });
 
   it('a script-builder session resolves on the script_builder surface', async () => {
     mockGetSession.mockResolvedValue(makeSession({ type: 'script_builder' }));
     await runPreFlightChecks('session-1', 'hello', auth);
-    expect(mockResolveSessionTurn).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'script_builder', userId: auth.user.id });
+    expect(mockResolveSessionTurn).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'script_builder', userId: auth.user.id, planUserSession: false });
   });
 
   it('returns exactly the resolved model and checks the budget with ITS funding (finding 13)', async () => {
@@ -569,7 +569,7 @@ describe('runPreFlightChecks', () => {
       expect(r.model.connection.kind).toBe('openai_compatible');
       expect(r.model).toBe(model);
       expect(r).not.toHaveProperty('openaiCompatible');
-      expect(mockResolveSessionTurn).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'chat', userId: auth.user.id });
+      expect(mockResolveSessionTurn).toHaveBeenCalledWith({ sessionId: 'session-1', surface: 'chat', userId: auth.user.id, planUserSession: false });
       // Funding is the resolved offering's, never an assumed platform path.
       expect(mockCheckBudgetDetailed).toHaveBeenCalledWith('org-1', 'partner_key');
     } finally {

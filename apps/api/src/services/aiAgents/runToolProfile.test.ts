@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ToolProfileFacts } from '../aiModels/toolExposure';
 import { CHAT_MINIMAL_TOOLS } from '../aiModels/toolProfiles';
 import { AgentRunBlockedError } from './modelBlocked';
-import { applyRunToolProfile, type RunToolProfileInput } from './runToolProfile';
+import { applyRunToolProfile, resolveRunToolProfile, type RunToolProfileInput } from './runToolProfile';
 
 const facts = (over: Partial<ToolProfileFacts> = {}): ToolProfileFacts => ({
   toolProfile: 'auto', toolAllowlist: null, effectiveWindow: null, transport: 'gateway', ...over,
@@ -23,6 +23,12 @@ function input(over: Partial<RunToolProfileInput> = {}): RunToolProfileInput {
 }
 
 describe('applyRunToolProfile (#11394)', () => {
+  it('offline resolution can measure an underpowered profile, while runtime admission refuses it', () => {
+    const restricted = input({ facts: facts({ toolProfile: 'minimal' }) });
+    expect(resolveRunToolProfile(restricted).exposure.profile).toBe('minimal');
+    expect(() => applyRunToolProfile(restricted)).toThrow(AgentRunBlockedError);
+  });
+
   it('identity: exposure and registration unchanged', () => {
     const base = input();
     const r = applyRunToolProfile(base);
@@ -86,12 +92,12 @@ describe('applyRunToolProfile (#11394)', () => {
   });
 
   it('flow tools are dropped under minimal, kept under custom scripts', () => {
-    const exposed = [...TROUBLESHOOT.map((n) => `mcp__breeze__${n}`), 'mcp__breeze__flow__reset'];
-    const minimal = applyRunToolProfile(input({ run: { profile: 'full' }, facts: facts({ toolProfile: 'minimal' }), exposedNames: exposed, flowToolNames: ['flow__reset'] }));
+    const exposed = [...TROUBLESHOOT.map((n) => `mcp__breeze__${n}`), 'mcp__breeze__flow__reset', 'mcp__breeze__submit_analysis'];
+    const minimal = applyRunToolProfile(input({ run: { profile: 'analysis' }, facts: facts({ toolProfile: 'minimal' }), exposedNames: exposed, flowToolNames: ['flow__reset'] }));
     expect(minimal.keepsFlowTool('flow__reset')).toBe(false);
     expect(minimal.exposedNames).not.toContain('mcp__breeze__flow__reset');
     const custom = applyRunToolProfile(input({
-      run: { profile: 'full' }, facts: facts({ toolProfile: 'custom', toolAllowlist: { domains: ['scripts'], tools: [] } }),
+      run: { profile: 'analysis' }, facts: facts({ toolProfile: 'custom', toolAllowlist: { domains: ['scripts'], tools: [] } }),
       exposedNames: exposed, flowToolNames: ['flow__reset'],
     }));
     expect(custom.keepsFlowTool('flow__reset')).toBe(true);

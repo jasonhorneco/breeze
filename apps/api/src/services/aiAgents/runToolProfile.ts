@@ -36,7 +36,8 @@ export interface RunToolProfile {
   keepsFlowTool: (name: string) => boolean;
 }
 
-export function applyRunToolProfile(input: RunToolProfileInput): RunToolProfile {
+/** Pure exposure resolution, also used by offline prefix measurement. No dispatch occurs here. */
+export function resolveRunToolProfile(input: RunToolProfileInput): RunToolProfile {
   const { run, facts, flowToolNames } = input;
   const outcome = new Set<string>(outcomeToolsForRun(run));
   const flows = new Set(flowToolNames);
@@ -51,6 +52,24 @@ export function applyRunToolProfile(input: RunToolProfileInput): RunToolProfile 
       ...flowToolNames.map((name) => ({ name, domain: 'scripts' as const })),
     ],
   }, { domainOf: input.domainOf });
+  if (exposure.names === null) {
+    return { exposure, exposedNames: [...input.exposedNames], onlyTools: input.onlyTools, keepsFlowTool: () => true };
+  }
+  const names = new Set(exposure.names);
+  const kept = new Set([...exposure.names, ...exposure.extraToolNames]);
+  return {
+    exposure,
+    exposedNames: input.exposedNames.filter((n) => kept.has(bareToolName(n))),
+    onlyTools: new Set([...(input.onlyTools ?? names)].filter((n) => names.has(n))),
+    keepsFlowTool: (name) => kept.has(name),
+  };
+}
+
+/** Runtime admission keeps the floor and window checks before any model call. */
+export function applyRunToolProfile(input: RunToolProfileInput): RunToolProfile {
+  const resolved = resolveRunToolProfile(input);
+  const { exposure } = resolved;
+  const { facts } = input;
   // #11396: `auto` found no profile that fits the known window. Blocked the
   // same way as an underpowered profile (an admin's model choice), naming
   // the window, before any provider call.
@@ -62,10 +81,7 @@ export function applyRunToolProfile(input: RunToolProfileInput): RunToolProfile 
       message,
     );
   }
-  if (exposure.names === null) {
-    return { exposure, exposedNames: [...input.exposedNames], onlyTools: input.onlyTools, keepsFlowTool: () => true };
-  }
-  const coverage = checkSurfaceCoverage('ai_agents', exposure, run);
+  const coverage = checkSurfaceCoverage('ai_agents', exposure, input.run, new Set(input.exposedNames.map(bareToolName)));
   if (!coverage.ok) {
     const message = SURFACE_UNDERPOWERED_MESSAGE('AI agent');
     throw new AgentRunBlockedError(
@@ -74,12 +90,5 @@ export function applyRunToolProfile(input: RunToolProfileInput): RunToolProfile 
       message,
     );
   }
-  const names = new Set(exposure.names);
-  const kept = new Set([...exposure.names, ...exposure.extraToolNames]);
-  return {
-    exposure,
-    exposedNames: input.exposedNames.filter((n) => kept.has(bareToolName(n))),
-    onlyTools: new Set([...(input.onlyTools ?? names)].filter((n) => names.has(n))),
-    keepsFlowTool: (name) => kept.has(name),
-  };
+  return resolved;
 }
