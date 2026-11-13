@@ -76,7 +76,7 @@ describe.skipIf(!RUN)('tool settings write (#11398)', () => {
     const user = await createUser({ partnerId: p });
     await fixtureSql`
       INSERT INTO ai_agents (partner_id, kind, name, created_by, offering_id, offering_partner_id)
-      VALUES (${p}, 'troubleshoot', 'Pinned', ${user.id}, ${offeringId}, ${p})`;
+      VALUES (${p}, 'helpdesk', 'Pinned', ${user.id}, ${offeringId}, ${p})`;
     const withAgent = await inSystem(() => loadServedToolSurfaces(p, offeringId));
     expect(withAgent.surfaces.has('ai_agents')).toBe(true);
     expect(withAgent.troubleshootingRuns).toBe(true);
@@ -106,7 +106,7 @@ describe.skipIf(!RUN)('tool settings write (#11398)', () => {
     const user = await createUser({ partnerId: p });
     await fixtureSql`
       INSERT INTO ai_agents (partner_id, kind, name, created_by, offering_id, offering_partner_id, disabled_at)
-      VALUES (${p}, 'troubleshoot', 'Retired', ${user.id}, ${offeringId}, ${p}, now())`;
+      VALUES (${p}, 'helpdesk', 'Retired', ${user.id}, ${offeringId}, ${p}, now())`;
     const disabledOnly = await inSystem(() => loadServedToolSurfaces(p, offeringId));
     expect([...disabledOnly.surfaces]).toEqual([]);
     expect(disabledOnly.troubleshootingRuns).toBe(false);

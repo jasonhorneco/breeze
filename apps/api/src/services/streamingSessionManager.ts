@@ -1764,8 +1764,6 @@ export class StreamingSessionManager {
                   // W04 (#11397): a constrained profile shows its own note for a refused tool-call batch.
                   const text = presentRefusedToolCallNote(event.delta.text, session.toolExposure?.promptMode);
                   session.eventBus.publish({ type: 'content_delta', delta: text });
-                  // #10427: only a Wisp turn has a record (W05), so ordinary chat buffers nothing.
-                  if (session.currentTurn) appendWispAssistantText(session.currentTurn, text);
                 }
               }
             } else if (event.type === 'content_block_start') {

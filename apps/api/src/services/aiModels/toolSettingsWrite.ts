@@ -299,6 +299,6 @@ export async function loadServedToolSurfaces(partnerId: string, offeringId: stri
     if (r.surface === 'ai_agents' && TROUBLESHOOTING_ROLES.has(r.role)) troubleshootingRuns = true;
   }
   if (agents.length > 0) surfaces.add('ai_agents');
-  if (agents.some((a) => a.kind === 'troubleshoot')) troubleshootingRuns = true;
+  if (agents.some((a) => a.kind === 'helpdesk')) troubleshootingRuns = true;
   return { surfaces, troubleshootingRuns };
 }
