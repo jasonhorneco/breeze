@@ -4,7 +4,7 @@ vi.mock('../../../llm/llmEgressRecorder', () => ({ recordLlmEgressEvent: () => {
 
 import { __setUpstreamFetchForTests, setGatewayConnectionCheck } from '../forward';
 import { startModelGateway, type ModelGateway } from '../server';
-import { __resetGatewayFailureNotesForTests, takeGatewayFailureNote } from '../failureNotes';
+import { __resetGatewayFailureNotesForTests, takeGatewayFailure, takeGatewayFailureNote } from '../failureNotes';
 import { GATEWAY_PLACEHOLDER_KEY } from './adapter';
 import { encodeSse } from './sse';
 import './planAdapter';
@@ -62,7 +62,7 @@ describe('native ChatGPT plan gateway request semantics', () => {
     await expect(sdk.messages.create({ ...request, messages: [{ role: 'user', content: 'evidence '.repeat(2000) }] }))
       .rejects.toMatchObject({ status: 400 });
     expect(calls).toBe(0);
-    expect(takeGatewayFailureNote('fixture-session')).toMatchObject({ code: 'context_window_exceeded' });
+    expect(takeGatewayFailure('fixture-session')).toMatchObject({ code: 'context_window_exceeded' });
   });
   it('applies the grant schema profile to the actual subscription request', async () => {
     let sent: unknown;
