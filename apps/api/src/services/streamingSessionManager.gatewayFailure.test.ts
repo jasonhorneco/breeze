@@ -56,6 +56,8 @@ vi.mock('./aiToolOutput', () => ({
 }));
 vi.mock('./clientIp', () => ({ getTrustedClientIpOrUndefined: () => undefined }));
 vi.mock('./toolSources/resolver', () => ({ resolveTenantTools: vi.fn(async () => []) }));
+// Keep this gateway-turn suite independent of the flow resolver's route graph.
+vi.mock('./flows/flowTools', () => ({ resolveFlowTools: vi.fn(async () => []) }));
 
 import { StreamingSessionManager } from './streamingSessionManager';
 import { settleInvocation } from './aiModels/settleInvocation';
