@@ -16,8 +16,8 @@ export interface RunFloorRef { profile: AiAgentRunProfile; taskId?: string | nul
 
 /** Registry tools a run profile cannot do its job without, beyond its outcome tools. */
 const REQUIRED_BY_RUN_PROFILE: Readonly<Partial<Record<AiAgentRunProfile, readonly string[]>>> = {
-  // troubleshootProfile.ts: the run proposes commands and scripts (forced shadow).
-  device_troubleshooting: ['execute_command', 'run_script'],
+  // In this release troubleshooting uses full runs; native mode and approvals govern actions.
+  full: ['execute_command', 'run_script'],
 };
 
 /** Static floors. `ai_agents` is per run: see `requiredToolsFor`. */

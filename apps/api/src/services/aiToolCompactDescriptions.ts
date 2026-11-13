@@ -40,7 +40,6 @@ export const COMPACT_TOOL_DESCRIPTIONS: Readonly<Record<string, string>> = Objec
   get_device_time_status: 'Windows time sync on one device: expected timezone and its source, findings and recent time events.',
   get_device_vulnerabilities: 'CVE findings on one device with affected software, severity, CVSS, EPSS, risk score, CISA KEV and patch availability.',
   get_fleet_health: 'Device reliability scores, worst first, with uptime, crash and failure metrics. Actions: list (default), history, offenders (deviceId), evaluation, org_summary (orgId).',
-  get_org_summary: 'One organization at a glance: devices online, open alerts and tickets, contracts, invoices, sites, contacts, last activity. Sections you lack permission for are omitted.',
   get_script_details: 'Script details: parameters, version history and execution statistics. The script content is omitted unless requested.',
   get_script_execution: 'Status, exit code, stdout/stderr and timing of one script execution. A run timeout means the 60s wait expired, not that the script failed: recheck before editing.',
   get_script_execution_history: 'Past script runs, newest first, for one script (scriptId), one device (deviceId) or both: status, exit code, output and timing.',

@@ -53,6 +53,7 @@ vi.mock('../../services/permissions', () => ({
 vi.mock('../../services/auditEvents', () => ({ writeRouteAudit: vi.fn() }));
 const TOOL_CATALOG = vi.hoisted(() => ({ sentinel: 'tool-catalog' }));
 vi.mock('../../services/aiModels/toolProfileCatalog', () => ({ breezeToolProfileCatalog: () => TOOL_CATALOG }));
+vi.mock('../../services/aiModels/codexReviewCatalog', () => ({ codexReviewCatalog: () => undefined }));
 vi.mock('../../services/sentry', () => ({ captureException: vi.fn() }));
 vi.mock('../../db', () => ({ db: {}, runOutsideDbContext: vi.fn((fn: () => unknown) => fn()), withSystemDbAccessContext: vi.fn() }));
 vi.mock('../../services/redis', () => ({ getRedis: vi.fn(() => ({})) }));

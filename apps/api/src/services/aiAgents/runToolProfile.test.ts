@@ -11,7 +11,7 @@ const TROUBLESHOOT = ['get_device_details', 'search_logs', 'list_scripts', 'exec
 
 function input(over: Partial<RunToolProfileInput> = {}): RunToolProfileInput {
   return {
-    run: { profile: 'device_troubleshooting' },
+    run: { profile: 'full' },
     facts: facts(),
     exposedNames: TROUBLESHOOT.map((n) => `mcp__breeze__${n}`),
     onlyTools: new Set(TROUBLESHOOT),

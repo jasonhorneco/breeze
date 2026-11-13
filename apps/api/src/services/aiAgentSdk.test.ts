@@ -1021,7 +1021,7 @@ describe('createSessionPreToolUse', () => {
     mockDispatchApprovalPushToTokens.mockResolvedValue({ tokensFound: 0, dispatched: 0, errors: 0 });
   });
 
-  it('auto-approve allows Tier 2 tools and creates an executing audit record', async () => {
+  it.each(['platform', 'partner_key', 'chatgpt_plan'] as const)('auto-approve honors native Tier 2 mode for %s funding', async (funding) => {
     vi.mocked(checkGuardrails).mockReturnValue({
       allowed: true,
       tier: 2,
@@ -1029,7 +1029,7 @@ describe('createSessionPreToolUse', () => {
       description: 'Take screenshot',
     } as any);
     const values = mockInsertValues();
-    const session = makeActiveSession({ approvalMode: 'auto_approve' });
+    const session = makeActiveSession({ approvalMode: 'auto_approve', turnBinding: { funding } });
 
     const result = await createSessionPreToolUse(session)('take_screenshot', { deviceId: 'device-1' });
 

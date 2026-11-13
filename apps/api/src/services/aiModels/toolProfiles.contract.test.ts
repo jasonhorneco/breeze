@@ -59,13 +59,13 @@ describe('curated tool profiles (#11394)', () => {
     expect(isLiterallyReadOnly('script_builder', 'execute_script_on_device')).toBe(false);
   });
 
-  it('chat minimal is exactly the 12 names of plan Decision 5', () => {
+  it('chat minimal is the installed Decision 5 set (organization summary is not in this release)', () => {
     expect([...CURATED_PROFILES.chat.minimal].sort()).toEqual([
       'analyze_metrics', 'get_alert_correlations', 'get_device_details', 'get_device_hardware_health', 'get_device_health',
-      'get_fleet_health', 'get_org_summary', 'list_organizations', 'query_audit_log', 'query_devices', 'search_documentation',
+      'get_fleet_health', 'list_organizations', 'query_audit_log', 'query_devices', 'search_documentation',
       'search_logs',
     ]);
-    expect(CHAT_MINIMAL_TOOLS).toHaveLength(12);
+    expect(CHAT_MINIMAL_TOOLS).toHaveLength(11);
   });
 
   it('chat standard has 35..45 names, no duplicates', () => {

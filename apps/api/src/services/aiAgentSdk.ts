@@ -1778,7 +1778,7 @@ function createGatedSessionPreToolUse(session: ActiveSession) {
       }
 
       // Determine effective approval mode (pause overrides to per_step)
-      const effectiveMode: AiApprovalMode = session.isPaused || session.turnBinding.funding === 'chatgpt_plan'
+      const effectiveMode: AiApprovalMode = session.isPaused
         ? 'per_step' : session.approvalMode;
 
       // Auto-approve mode only skips approval for Tier 2 tools. Tier 3+
@@ -3468,7 +3468,7 @@ export function createSessionPostToolUse(session: ActiveSession): PostToolUseCal
         });
       }
 
-      const effectiveMode = session.isPaused || session.turnBinding.funding === 'chatgpt_plan'
+      const effectiveMode = session.isPaused
         ? 'per_step' : session.approvalMode;
       if (effectiveMode === 'hybrid_plan' && planStepIdx >= 0) {
         if (parsedOutput.imageBase64 && typeof parsedOutput.imageBase64 === 'string') {

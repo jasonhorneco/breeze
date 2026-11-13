@@ -2,7 +2,6 @@ import { AI_AGENT_RUN_PROFILES } from '@breeze/shared';
 import { describe, expect, it } from 'vitest';
 import { TOOL_TIERS } from '../aiAgentSdkTools';
 import { outcomeToolsForRun } from '../aiAgents/outcomeTools';
-import { TROUBLESHOOT_PROPOSABLE_TOOLS } from '../aiAgents/troubleshootProfile';
 import { SCRIPT_BUILDER_TOOL_TIERS } from '../scriptBuilderTools';
 import {
   SURFACE_REQUIRED_TOOLS,
@@ -40,9 +39,9 @@ describe('SURFACE_REQUIRED_TOOLS (#11394)', () => {
         expect(outcome || name in TOOL_TIERS, `${run}: ${name}`).toBe(true);
       }
     }
-    for (const name of requiredToolsFor('ai_agents', { profile: 'device_troubleshooting' })) {
-      if (!(outcomeToolsForRun({ profile: 'device_troubleshooting' }) as string[]).includes(name)) {
-        expect(TROUBLESHOOT_PROPOSABLE_TOOLS as readonly string[]).toContain(name);
+    for (const name of requiredToolsFor('ai_agents', { profile: 'full' })) {
+      if (!(outcomeToolsForRun({ profile: 'full' }) as string[]).includes(name)) {
+        expect(name in TOOL_TIERS).toBe(true);
       }
     }
   });
@@ -90,13 +89,13 @@ describe('SURFACE_REQUIRED_TOOLS (#11394)', () => {
   });
 
   it('troubleshoot profile fails coverage under minimal (missing execute_command, run_script), passes under standard', () => {
-    const run = { profile: 'device_troubleshooting' as const };
+    const run = { profile: 'full' as const };
     expect(checkSurfaceCoverage('ai_agents', agentExposure('minimal', run), run)).toEqual({ ok: false, missing: ['execute_command', 'run_script'] });
     expect(checkSurfaceCoverage('ai_agents', agentExposure('standard', run), run)).toEqual({ ok: true });
   });
 
   it('analysis and other read-only run profiles pass coverage under minimal', () => {
-    for (const profile of ['analysis', 'verdict', 'sweep', 'narrative', 'full'] as const) {
+    for (const profile of ['analysis', 'verdict', 'sweep', 'narrative'] as const) {
       expect(checkSurfaceCoverage('ai_agents', agentExposure('minimal', { profile }), { profile }), profile).toEqual({ ok: true });
     }
   });

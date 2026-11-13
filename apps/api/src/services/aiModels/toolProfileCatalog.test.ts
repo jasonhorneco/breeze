@@ -13,8 +13,8 @@ describe('breezeToolProfileCatalog (#11398)', () => {
     for (const [surface, names] of Object.entries(SURFACE_REQUIRED_TOOLS)) {
       for (const name of names) expect(catalog.surfaceNames(surface as 'chat').has(name), `${surface}: ${name}`).toBe(true);
     }
-    const outcome = new Set<string>(outcomeToolsForRun({ profile: 'device_troubleshooting' }));
-    for (const name of requiredToolsFor('ai_agents', { profile: 'device_troubleshooting' }).filter((n) => !outcome.has(n))) {
+    const outcome = new Set<string>(outcomeToolsForRun({ profile: 'full' }));
+    for (const name of requiredToolsFor('ai_agents', { profile: 'full' }).filter((n) => !outcome.has(n))) {
       expect(catalog.surfaceNames('ai_agents').has(name), name).toBe(true);
     }
   });

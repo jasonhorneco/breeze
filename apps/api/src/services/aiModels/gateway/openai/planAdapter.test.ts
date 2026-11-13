@@ -70,7 +70,7 @@ describe('native ChatGPT plan gateway request semantics', () => {
       type: 'additional_tools', tools: [{ parameters: {
         type: 'object', properties: { name: { type: 'string' } }, required: ['name'],
       } }],
-    }] });
+    }, { role: 'user', content: request.messages[0].content }] });
     expect(JSON.stringify(sent)).not.toContain('maxLength');
   });
 

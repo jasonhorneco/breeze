@@ -86,7 +86,7 @@ const SURFACE_LABELS: Readonly<Record<ProfiledSurface, string>> = {
   office_chat: 'Office add-in',
 };
 
-const TROUBLESHOOTING_RUN: RunFloorRef = { profile: 'device_troubleshooting' };
+const TROUBLESHOOTING_RUN: RunFloorRef = { profile: 'full' };
 
 export function hasToolSettings(patch: OfferingDetailsPatch): boolean {
   return patch.toolProfile !== undefined || patch.toolAllowlist !== undefined || patch.contextWindowOverride !== undefined;

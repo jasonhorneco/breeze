@@ -62,6 +62,7 @@ const API_SRC = resolve(__dirname, '..');
  * partner-wide capability gate. Every entry carries the reason it is exempt.
  */
 const ALLOWED_WITHOUT_CAPABILITY_CHECK: Record<string, string> = {
+  'services/aiModels/planRegistry.ts': 'trusted startup catalog reconciliation; caller refresh is gated in aiModels/connections.ts by partner-wide capability and MFA',
   'routes/devices/groups.ts': 'legacy org-only API; refuses partner-owned groups (#10521 W2a)',
   'services/deviceGroupDelete.ts': 'data access; gate in routes/groups.ts',
   'services/fleetDesign/apply.ts': 'org-scoped fleet design; never touches org_id IS NULL rows',

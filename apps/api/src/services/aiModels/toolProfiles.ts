@@ -22,7 +22,7 @@ export function isProfiledSurface(surface: AiSurface): surface is ProfiledSurfac
   return (PROFILED_SURFACES as readonly string[]).includes(surface);
 }
 
-/** Chat `minimal`: plan Decision 5, exactly these 12 (plus `set_device_context` by the always-keep rule). */
+/** Chat `minimal`: plan Decision 5, the installed subset of Decision 5 (plus `set_device_context` by the always-keep rule). */
 export const CHAT_MINIMAL_TOOLS = [
   'query_devices',
   'get_device_details',
@@ -35,7 +35,6 @@ export const CHAT_MINIMAL_TOOLS = [
   'query_audit_log',
   'search_documentation',
   'list_organizations',
-  'get_org_summary',
 ] as const;
 
 /** Chat `standard`: minimal + the everyday helpdesk set, including supervised (tier 2/3) actions. */
@@ -47,6 +46,8 @@ export const CHAT_STANDARD_TOOLS = [
   'manage_tickets',
   'list_scripts',
   'get_script_details',
+  'propose_script',
+  'get_script_proposal',
   'run_script',
   'manage_services',
   'manage_patches',
