@@ -5,6 +5,8 @@ import type { LoadedCandidate } from './candidateLoader';
 import type { PartnerAiConnection } from './connections';
 import type { GatewayConnectionConfig, GatewayCredential } from './gateway/types';
 import type { Offering } from './offerings';
+import { resolveEffectiveContextWindow } from './contextWindowFacts';
+import { toolProfileFactsFrom } from './toolProfileFacts';
 
 const planOffering = z.object({
   efforts: z.array(z.enum(EFFORT_LEVELS)),
@@ -43,7 +45,9 @@ export function planCandidate(offering: Offering, conn: PartnerAiConnection): Lo
   const savedEffort = z.enum(EFFORT_LEVELS).safeParse(offering.defaultOptions?.effort);
   const defaultEffort = savedEffort.success && effortLevels.includes(savedEffort.data)
     ? savedEffort.data : model.success ? model.data.defaultEffort : null;
+  const window = resolveEffectiveContextWindow(offering, conn.configVersion);
   return {
+    toolProfileFacts: toolProfileFactsFrom(offering, 'gateway', window.value),
     facts: {
       ownerPartnerId: offering.partnerId, enabled: offering.enabled, lifecycle: offering.lifecycle,
       requiredPermission: offering.requiredPermission, platform: null, catalog: null,
@@ -64,7 +68,7 @@ export function planCandidate(offering: Offering, conn: PartnerAiConnection): Lo
     allowedOptions: null,
     refusalFallbackOfferingId: null,
     promptProfile: 'generic',
-    limits: { maxInputTokens: null, maxOutputTokens: null },
+    limits: { maxInputTokens: window.value, maxOutputTokens: null },
     configVersion: conn.configVersion,
   };
 }

@@ -77,6 +77,20 @@ describe('liveQueryKey (spec §9.2: reuse only if nothing that shaped the subpro
     expect(JSON.stringify(b)).not.toContain('sk-secret-material');
     expect(liveQueryKey(b)).not.toContain('sk-secret-material');
   });
+
+  it('keeps both subscription effort and profile identity in query reuse', () => {
+    const plan = resolved({ funding: 'chatgpt_plan', options: { effort: 'low' },
+      connection: { id: 'plan-connection', kind: 'chatgpt_plan', config: {
+        source: 'gateway', kind: 'chatgpt_plan', partnerId: 'p1', connectionId: 'plan-connection',
+        configVersion: 3, baseUrl: 'https://worker.example.test', effort: 'low',
+      } },
+    });
+    const low = turnBindingFrom(plan);
+    const high = turnBindingFrom({ ...plan, options: { effort: 'high' } });
+    expect(liveQueryKey(low, 'profile-one')).not.toBe(liveQueryKey(high, 'profile-one'));
+    expect(liveQueryKey(low, 'profile-one')).not.toBe(liveQueryKey(low, 'profile-two'));
+    expect(liveQueryKey(low, FULL_IDENTITY_FINGERPRINT)).toBe(liveQueryKey(low));
+  });
 });
 
 describe('parseTurnBinding', () => {

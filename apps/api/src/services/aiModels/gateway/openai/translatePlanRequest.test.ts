@@ -62,4 +62,19 @@ describe('ChatGPT plan request translation', () => {
     expect(translatePlanRequest(request, 'gpt-6-luna', 'low', true).body.tools).toEqual([{ type: 'web_search' }]);
     expect(() => translatePlanRequest(request, 'gpt-6-luna', 'low')).toThrow(/server tools are not supported/);
   });
+
+  it('compacts only advertised schemas while retaining original validation and saved effort', () => {
+    const parameters = { type: 'object', properties: { value: { type: 'string', maxLength: 20, format: 'hostname' } }, required: ['value'], additionalProperties: false };
+    const input = { model: 'sdk-alias', max_tokens: 256, messages: [{ role: 'user', content: 'Read.' }],
+      tools: [{ name: 'read_inventory', input_schema: parameters }] };
+    const full = translatePlanRequest(input, 'gpt-6.1-sol', 'high');
+    const compact = translatePlanRequest(input, 'gpt-6.1-sol', 'high', false, { compactSchemas: true });
+    expect(full.body.input[0]).toMatchObject({ type: 'additional_tools', tools: [{ parameters }] });
+    expect(compact.body.input[0]).toMatchObject({ type: 'additional_tools', tools: [{ parameters: {
+      type: 'object', properties: { value: { type: 'string' } }, required: ['value'], additionalProperties: false,
+    } }] });
+    expect(compact.tools.schemas).toEqual(full.tools.schemas);
+    expect(compact.body.reasoning).toEqual({ effort: 'high' });
+    expect(parameters.properties.value.maxLength).toBe(20);
+  });
 });

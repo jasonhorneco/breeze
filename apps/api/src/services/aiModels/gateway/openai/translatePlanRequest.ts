@@ -43,11 +43,11 @@ function toPlanInput(message: OaiMessage): PlanInput[] {
 }
 
 /** Builds the eligible Responses payload from a grant-bound selection. Breeze still executes all local tools. */
-export function translatePlanRequest(input: unknown, model: string, effort: EffortLevel | null, catalogSearch = false) {
+export function translatePlanRequest(input: unknown, model: string, effort: EffortLevel | null, catalogSearch = false, options?: { compactSchemas?: boolean }) {
   const request = input as { tools?: Array<{ type?: string; name?: string }> } | null;
   const hasCatalogSearch = catalogSearch && Array.isArray(request?.tools) && request.tools.length === 1 &&
     request.tools[0]?.type === 'web_search_20250305' && request.tools[0]?.name === 'web_search';
-  const translated = translateMessagesRequest(hasCatalogSearch ? { ...request, tools: undefined } : input, model);
+  const translated = translateMessagesRequest(hasCatalogSearch ? { ...request, tools: undefined } : input, model, options);
   const { messages, tools, tool_choice: choice } = translated.body;
   const instructions = messages.find(message => message.role === 'system')?.content;
   const responseInput = messages.flatMap(toPlanInput);

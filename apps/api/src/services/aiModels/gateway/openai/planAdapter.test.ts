@@ -25,7 +25,7 @@ function completed() {
   }), { headers: { 'content-type': 'text/event-stream' } });
 }
 
-function client(maxRetries = 0) {
+function client(maxRetries = 0, compactSchemas = false) {
   const grant = gateway.grant({
     config: {
       source: 'gateway', kind: 'chatgpt_plan', partnerId: 'fixture-partner',
@@ -33,7 +33,7 @@ function client(maxRetries = 0) {
       baseUrl: 'https://plan-worker.example.test', effort: 'low',
     },
     credential: { secret: 'fixture-worker-credential' }, wireModels: [model],
-    orgId: 'fixture-org', aiSessionId: 'fixture-session', purpose: 'dispatch',
+    orgId: 'fixture-org', aiSessionId: 'fixture-session', purpose: 'dispatch', compactSchemas,
   });
   return {
     grant,
@@ -56,6 +56,24 @@ afterEach(async () => {
 });
 
 describe('native ChatGPT plan gateway request semantics', () => {
+  it('applies the grant schema profile to the actual subscription request', async () => {
+    let sent: unknown;
+    __setUpstreamFetchForTests((async (_url, init) => {
+      sent = JSON.parse(String(init?.body));
+      return completed();
+    }) as typeof fetch);
+    const { sdk } = client(0, true);
+    await sdk.messages.create({ ...request, tools: [{ name: 'read_inventory', input_schema: {
+      type: 'object', properties: { name: { type: 'string', maxLength: 30 } }, required: ['name'],
+    } }] });
+    expect(sent).toMatchObject({ model, reasoning: { effort: 'low' }, input: [{
+      type: 'additional_tools', tools: [{ parameters: {
+        type: 'object', properties: { name: { type: 'string' } }, required: ['name'],
+      } }],
+    }] });
+    expect(JSON.stringify(sent)).not.toContain('maxLength');
+  });
+
   it('allows identical legitimate requests and reports each response usage', async () => {
     const { sdk } = client();
     const first = await sdk.messages.create(request);

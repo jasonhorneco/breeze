@@ -55,7 +55,7 @@ export const chatGptPlanAdapter: GatewayAdapter = {
     const estimatedInputTokens = estimateInputTokens(parsed);
     if (req.path === '/v1/messages/count_tokens') return json({ input_tokens: estimatedInputTokens });
 
-    const translated = translatePlanRequest(parsed, model, config.effort, config.catalogSearch);
+    const translated = translatePlanRequest(parsed, model, config.effort, config.catalogSearch, { compactSchemas: grant.compactSchemas });
     const body = JSON.stringify(translated.body);
     // Use the caller's normal SDK request/retry semantics, like other gateway
     // adapters. Identical input is not evidence of a duplicate execution, and
