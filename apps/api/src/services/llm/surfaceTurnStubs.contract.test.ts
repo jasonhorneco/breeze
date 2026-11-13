@@ -33,7 +33,7 @@ vi.mock('../commandQueue', async (importOriginal) => {
   return Object.fromEntries(Object.entries(actual).map(([k, v]) => [k, typeof v === 'function' ? trap.fn(`commandQueue.${k}`) : v]));
 });
 
-import { breezeServerTools, chatToolDomain, listChatSurfaceToolNames } from '../aiAgentSdkTools';
+import { breezeServerTools, chatToolDomain, listBreezeServerToolNames } from '../aiAgentSdkTools';
 import { applyRunToolProfile } from '../aiAgents/runToolProfile';
 import { buildOutcomeSdkTools } from '../aiAgents/outcomeTools';
 import { finalizeSessionToolExposure } from '../aiModels/sessionToolExposure';
@@ -69,7 +69,7 @@ function productionTools(surface: SurfaceTurnSurface, f: ToolProfileFacts) {
   const session = finalizeSessionToolExposure({
     surface, facts: f,
     allowedTools: surface === 'chat' ? undefined : capture.allowedTools,
-    registryNames: listChatSurfaceToolNames,
+    registryNames: listBreezeServerToolNames,
     breezeServer: surface !== 'script_builder',
     domainOf: chatToolDomain, extraTools: [],
   });
