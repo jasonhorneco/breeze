@@ -84,7 +84,7 @@ const MAX_ACTIVE_SESSIONS = 200;
  * Eviction protects an in-flight turn (see `isTurnInFlight`), and `state` alone
  * would make that protection unbounded: `runBackgroundProcessor` can leave a
  * session in `processing` after a throw or an aborted subprocess, and a hung
- * provider never emits another event â€” so a wedged session would be pinned in
+ * provider never emits another event — so a wedged session would be pinned in
  * memory forever, and under cap pressure a handful of them would wedge the
  * whole manager. `lastActivityAt` is refreshed when a turn starts and on every
  * assistant-message boundary and text delta, so a live stream never approaches
@@ -94,7 +94,7 @@ const MAX_ACTIVE_SESSIONS = 200;
  * Sized against this path's real worst case, which is longer than the OpenAI
  * twin's: a tier-3 tool can block on `waitForApproval` (300s, aiAgentSdk.ts)
  * and then execute under a 120s vision budget without emitting a single text
- * delta, i.e. ~7 min of legitimate silence â€” see SDK_TURN_TIMEOUT_MS above.
+ * delta, i.e. ~7 min of legitimate silence — see SDK_TURN_TIMEOUT_MS above.
  * 10 min clears that with headroom while still bounding a wedge.
  */
 export const PROCESSING_STALL_TIMEOUT_MS = 10 * 60 * 1000;
@@ -118,7 +118,7 @@ const CAPACITY_ALARM_THROTTLE_MS = 5 * 60 * 1000;
  * capacity alarm's only scrubber-surviving channel (a tag).
  *
  * Closed four-value set by construction, carrying no tenant, device or session
- * identifier â€” the shape ALLOWED_TAG_NAMES requires. The raw count would be
+ * identifier — the shape ALLOWED_TAG_NAMES requires. The raw count would be
  * unbounded cardinality; the bucket still separates "one turn over" from "the
  * manager is wedged", which is the distinction that decides whether to page.
  */
@@ -131,7 +131,7 @@ function bucketSessionOvershoot(size: number): string {
 /**
  * 6 min per-turn timeout. Sized to accept a single approval wait
  * (`waitForApproval`, aiAgentSdk.ts, 300_000ms = 5 min) plus headroom for
- * execution â€” but the two are NOT bounded to fit together, and this handler
+ * execution — but the two are NOT bounded to fit together, and this handler
  * does not reach into the pending call to stop it.
  *
  * #3096 review (raising the vision-tool budget in toolTimeouts.ts to 120s):
@@ -139,24 +139,24 @@ function bucketSessionOvershoot(size: number): string {
  * (aiAgentSdkTools.ts onPreToolUse vs. the executeTool wrapper), so the two
  * budgets stack rather than overlap. Worst case for a tier-3 vision/desktop
  * tool call is now approval wait (up to 5 min) + execution (up to 120s) =
- * up to 7 min â€” past this 6-min ceiling.
+ * up to 7 min — past this 6-min ceiling.
  *
  * When that happens today, `startTurnTimeout`'s callback (below) publishes
  * `error` + `done` and sets `state = 'idle'`, but does NOT abort
  * `session.abortController` or otherwise unblock the in-flight
- * `waitForApproval` poll â€” only `remove()` does that. `runBackgroundProcessor`'s
+ * `waitForApproval` poll — only `remove()` does that. `runBackgroundProcessor`'s
  * `for await` loop only stops on `state === 'closing' | 'closed'`, so once the
  * approval/tool call eventually settles, its SDK messages (tool_result,
  * closing assistant text, `result`) still get processed and published into a
  * turn the client was already told had ended.
  *
- * This is a known gap, not a new one from #3091/#3096 â€” the same overlap
+ * This is a known gap, not a new one from #3091/#3096 — the same overlap
  * already existed for two stacked ordinary approval waits before the vision
  * budget was ever raised. It has a proper fix in progress: PR #3104 (Closes
  * #3089) introduces a shared per-cycle `APPROVAL_WAIT_BUDGET_MS` that resets
  * at the same `message_start` point as this timeout, so cumulative approval
  * blocking is bounded to fit inside the turn window. That PR is not merged as
- * of this comment â€” do not assume the overlap is handled until it lands.
+ * of this comment — do not assume the overlap is handled until it lands.
  */
 const SDK_TURN_TIMEOUT_MS = 6 * 60 * 1000;
 
@@ -286,10 +286,10 @@ export function createSdkStderrRedactor(emit: (text: string) => void): { write(d
 
 /**
  * Wraps an AsyncEventQueue<SDKUserMessage> as the prompt source for query().
- * Follow-up messages are pushed via pushMessage() â€” no subprocess restart needed.
+ * Follow-up messages are pushed via pushMessage() — no subprocess restart needed.
  *
  * NOTE: The first message is pushed with whatever session_id is known (empty string
- * for new sessions). The SDK manages session IDs internally â€” the subprocess must
+ * for new sessions). The SDK manages session IDs internally — the subprocess must
  * receive the first message to start processing, so we cannot block on the init
  * event (which only arrives after the subprocess starts).
  */
@@ -365,8 +365,8 @@ function hasTokens(u: PendingTurnUsage): boolean {
 
 /**
  * The turn's BILLED tokens as the per-user ledger and the `done` event report
- * them. Cache-read and cache-creation tokens are input tokens â€” split out for
- * pricing only (see sumInputTokens) â€” so input includes them.
+ * them. Cache-read and cache-creation tokens are input tokens — split out for
+ * pricing only (see sumInputTokens) — so input includes them.
  */
 function billedTokenTotals(usage: readonly BilledUsage[]): { inputTokens: number; outputTokens: number } {
   let inputTokens = 0;
@@ -394,7 +394,7 @@ export interface ActiveSession {
   /**
    * Canonical org ID for this session, captured at creation time from the
    * aiSessions DB row. Use this (not `auth.orgId`) for RLS DB access context
-   * inside background callbacks â€” it is stable for the session's lifetime and
+   * inside background callbacks — it is stable for the session's lifetime and
    * is always set, even for system/partner-scoped users who own the session.
    */
   readonly orgId: string;
@@ -406,7 +406,7 @@ export interface ActiveSession {
    */
   readonly deviceId: string | null;
   /**
-   * Live-query identity this SDK subprocess was built with (spec Â§9.2,
+   * Live-query identity this SDK subprocess was built with (spec §9.2,
    * `liveQueryKey`): connection id, config version, catalog revision, wire
    * model and wire fingerprint. A turn whose key differs never reuses it.
    */
@@ -414,7 +414,7 @@ export interface ActiveSession {
   /**
    * The CURRENT turn's binding (W03 Task 6): the rate settlement bills. Seeded
    * at creation, replaced by the winner of `tryTransitionToProcessing` each
-   * turn â€” so a rate change between turns re-binds settlement without
+   * turn — so a rate change between turns re-binds settlement without
    * recreating the query (the price is not part of `liveKey`).
    */
   turnBinding: TurnBinding;
@@ -434,7 +434,7 @@ export interface ActiveSession {
    * W11 (#7609): the prompt profile and variant this live query's system
    * prompt was built with. Fixed for the query's life, as the system prompt
    * is; every settlement of a turn on this query records it (the per-turn
-   * `turnBinding` may carry a newer profile â€” liveQueryKey ignores it).
+   * `turnBinding` may carry a newer profile — liveQueryKey ignores it).
    */
   readonly promptProvenance: PromptProvenance;
   /** The Breeze users.id the ledger attributes turns to; null for helper / Office / system. */
@@ -451,8 +451,8 @@ export interface ActiveSession {
   budgetReservationId?: string;
   /**
    * Review S5: reservations whose settlement THREW (or came back unrecorded)
-   * on this session. They are never re-settled â€” a second settle of a failed
-   * real turn would be the abandoned-turn zero, losing its spend â€” only marked
+   * on this session. They are never re-settled — a second settle of a failed
+   * real turn would be the abandoned-turn zero, losing its spend — only marked
    * indeterminate when the processor exits.
    */
   unsettledReservationIds?: string[];
@@ -474,7 +474,7 @@ export interface ActiveSession {
   inputController: StreamInputController;
   eventBus: SessionEventBus;
   /**
-   * #9427: identity of this in-memory session â€” and so of its turn, because
+   * #9427: identity of this in-memory session — and so of its turn, because
    * `/messages` replaces the session before every turn. Sent to attaching
    * clients as `attach_state.turnId`.
    */
@@ -489,9 +489,9 @@ export interface ActiveSession {
   readonly createdAt: number;
   /**
    * RAW login AuthContext from the latest request. Used for actor identity,
-   * RBAC (`checkToolPermission` resolves the login role from it â€” a partner
+   * RBAC (`checkToolPermission` resolves the login role from it — a partner
    * tech keeps their partner role, matching the rest of the API), rate limits,
-   * and audit attribution. NOT for tool queries â€” see `toolAuth`.
+   * and audit attribution. NOT for tool queries — see `toolAuth`.
    */
   auth: AuthContext;
   /**
@@ -506,7 +506,7 @@ export interface ActiveSession {
   /**
    * Wisp W04 Task 4: the delegation grant this session runs under, or null
    * for an ordinary session. Resolved by `getOrCreate` ITSELF from the
-   * ai_sessions row (`lookupWispGrant`) â€” never passed in by a route â€” so no
+   * ai_sessions row (`lookupWispGrant`) — never passed in by a route — so no
    * caller can forget it; immutable for the session's life (the row's grant
    * columns never change). When set, `createSessionPreToolUse` gates every
    * tool call on the live ceiling and the tool runs under the per-call
@@ -537,7 +537,7 @@ export interface ActiveSession {
   /**
    * Count of tool calls completed (postToolUse fired) during the current turn.
    * Fed into settleInvocation's toolExecutionCount so the
-   * `ai_cost_usage.tool_execution_count` rollup actually increments â€” mirrors
+   * `ai_cost_usage.tool_execution_count` rollup actually increments — mirrors
    * pendingTurnUsage's accumulate-then-flush-on-`result` lifecycle. Reset to 0
    * after every flush (normal `result` or the abandoned-turn fallback below).
    */
@@ -545,7 +545,7 @@ export interface ActiveSession {
   /** Synchronously reserved focal auto-link slots; shares the tool-count reset lifecycle. */
   pendingTurnAutoLinkCount: number;
   /**
-   * tool_use id â†’ bare tool name for each pending call in toolUseIdQueue.
+   * tool_use id → bare tool name for each pending call in toolUseIdQueue.
    * Removed when the call's result is recorded, or used by the dropped-call
    * fallback in the background processor's 'user' case when the SDK rejected
    * the call before our MCP handler ever ran (issue #3094). Also lets a result
@@ -572,7 +572,7 @@ export interface ActiveSession {
   turnTimeoutId: ReturnType<typeof setTimeout> | null;
   /**
    * Epoch-ms deadline SHARED by every approval wait in the current assistant
-   * cycle (#3089) â€” set by the first wait of the cycle (beginApprovalWait in
+   * cycle (#3089) — set by the first wait of the cycle (beginApprovalWait in
    * aiAgentSdk.ts), reset to null at each message_start via startTurnTimeout.
    * Guarantees cumulative approval blocking per cycle stays under the turn
    * timeout so the model can always conclude the turn.
@@ -580,7 +580,7 @@ export interface ActiveSession {
   approvalWaitDeadline: number | null;
   /**
    * Aborts in-flight approval waits early WITHOUT tearing down the session
-   * (settleApprovalWaits in aiAgentSdk.ts) â€” fired when a new user message or
+   * (settleApprovalWaits in aiAgentSdk.ts) — fired when a new user message or
    * an interrupt arrives while the turn is blocked on approvals.
    */
   approvalWaitAbort: AbortController | null;
@@ -603,7 +603,7 @@ export interface ActiveSession {
   /**
    * Topology M4 Task 3 (#6000): the host-owned investigation runtime for the
    * CURRENT turn of a topology session (bound by the route through
-   * `tryTransitionToProcessing` â€” only when it wins the slot â€” and cleared
+   * `tryTransitionToProcessing` — only when it wins the slot — and cleared
    * when the turn ends). While set, provider text goes into
    * its output gate instead of the event bus, tool events are replaced by
    * fixed `topology_progress` phases, raw assistant content is never
@@ -615,14 +615,14 @@ export interface ActiveSession {
   topologyStopped?: boolean;
   /**
    * Set (and never cleared) when a topology turn timed out. The timeout tears
-   * the session down â€” SDK aborted, query closed â€” and this seal keeps the
+   * the session down — SDK aborted, query closed — and this seal keeps the
    * output gate shut for anything the provider still emits for that turn:
    * the processor loop drops it and the tool hooks refuse/skip it, so late,
    * unvalidated prose can never reach the event bus, replay or ai_messages
    * via the generic (non-topology) paths once `topologyInvestigation` is gone.
    */
   topologyTurnSealed?: boolean;
-  /** True when admin has paused auto-approve â€” falls back to per_step */
+  /** True when admin has paused auto-approve — falls back to per_step */
   isPaused: boolean;
   /** ID of the currently active action plan (if any) */
   activePlanId: string | null;
@@ -642,7 +642,7 @@ export interface ActiveSession {
   /**
    * Results of `analysis` runs associated with this session that have
    * finished but whose summary has not yet been shown to the model
-   * (execution-plane spec Â§5.5). Chat-initiated launch is currently disabled
+   * (execution-plane spec §5.5). Chat-initiated launch is currently disabled
    * (#6086), so nothing populates this from a live chat turn today; the field
    * is retained for when delegated authorization lands. Filled by
    * `services/workspace/chatRunBridge.ts` out of band; drained by
@@ -650,11 +650,11 @@ export interface ActiveSession {
    * Optional so existing `ActiveSession` fixtures compile unchanged.
    */
   pendingRunResults?: PendingRunResult[];
-  // â”€â”€ AI for Office (client sessions) â€” set by routes/clientAi/sessions.ts â”€â”€
+  // ── AI for Office (client sessions) — set by routes/clientAi/sessions.ts ──
   /** Client org policy writeMode, refreshed on every client message; the
    *  client tool handler rejects mutating tools when 'readonly'. */
   clientWriteMode?: 'readonly' | 'readwrite';
-  /** client_ai_org_policies.dlp_config (jsonb, unknown â€” the DLP engine parses
+  /** client_ai_org_policies.dlp_config (jsonb, unknown — the DLP engine parses
    *  it itself), refreshed on every client message. */
   clientDlpConfig?: unknown;
   /** Extra per-turn usage recorder invoked in the result case just before
@@ -663,16 +663,16 @@ export interface ActiveSession {
   recordExtraUsage?: (usage: { inputTokens: number; outputTokens: number; costCents: number }) => Promise<void>;
   /**
    * Tenant (BYO MCP) tools this session's `toolAuth` could see at session
-   * CREATION time, keyed by qualified name (e.g. `hudu__get_asset`) â€” Task
+   * CREATION time, keyed by qualified name (e.g. `hudu__get_asset`) — Task
    * A10. `createSessionPreToolUse` (aiAgentSdk.ts) consults this to gate a
    * tenant tool call the same way `TOOL_TIERS` gates a core one. Empty for
    * every session a `mcpServerFactory` builds its own MCP server for
-   * (script builder, client AI) â€” those surfaces don't resolve tenant tools.
+   * (script builder, client AI) — those surfaces don't resolve tenant tools.
    */
   tenantTools: ReadonlyMap<string, TenantToolDescriptor>;
   /**
    * W5 PR C (#5220): the `flow__<slug>` tools this session exposes, resolved
-   * at session CREATION (â‰¤ `flowToolsPerSessionMax`). The map only says which
+   * at session CREATION (≤ `flowToolsPerSessionMax`). The map only says which
    * flow tools the model was offered; every call re-resolves the flow live in
    * `createSessionPreToolUse` (flowToolGate.ts `gateFlowToolCall`). Empty when
    * flows are off and for every session that may not start flows
@@ -691,24 +691,24 @@ export interface ActiveSession {
  * Narrow a caller's AuthContext to a device-bound session's org (#3087).
  *
  * `ai_sessions.org_id` is anchored to the bound DEVICE's org at creation
- * (services/aiAgent.ts createSession â€” gated on `auth.canAccessOrg` +
+ * (services/aiAgent.ts createSession — gated on `auth.canAccessOrg` +
  * `auth.canAccessSite`), but tool execution historically ran under the raw
  * login AuthContext. For a partner-scope tech whose login org differs from the
- * device's org, org-scoped tools (`getOrgId(auth)` â†’ `accessibleOrgIds[0]`,
- * `auth.orgCondition(...)` â†’ whole partner) silently queried the WRONG org â€”
+ * device's org, org-scoped tools (`getOrgId(auth)` → `accessibleOrgIds[0]`,
+ * `auth.orgCondition(...)` → whole partner) silently queried the WRONG org —
  * e.g. `manage_patches` returned a sibling org's patches and `search_logs`
  * returned empty for the device's own logs.
  *
  * The returned context pins the org axis to the session org:
  * - `orgId` / `accessibleOrgIds` = the session (device) org only, with matching
  *   `orgCondition` / `canAccessOrg` closures from `buildOrgAccessClosures`.
- * - `scope` and `partnerId` are PRESERVED â€” collapsing a partner scope to
+ * - `scope` and `partnerId` are PRESERVED — collapsing a partner scope to
  *   'organization' would drop `accessiblePartnerIds` from the derived RLS
  *   context and black out partner-axis tables (scripts, alert templates,
- *   update rings â€” the #2822 failure mode). Partner-wide config rows apply to
+ *   update rings — the #2822 failure mode). Partner-wide config rows apply to
  *   the device's org and must stay readable.
  * - Site restrictions (`allowedSiteIds` / `canAccessSite`), `helperDeviceId`,
- *   principal/user/token are preserved via spread â€” this narrows, never widens.
+ *   principal/user/token are preserved via spread — this narrows, never widens.
  *
  * Defensive: throws if the caller cannot access the session org. Unreachable
  * in practice (`getSession` pre-filters by `auth.orgCondition`), but if auth
@@ -717,8 +717,8 @@ export interface ActiveSession {
 /**
  * Stamp the interactive-chat AI origin onto a request AuthContext (#5022 W01).
  *
- * `breezeSessionId` is the persisted `ai_sessions.id` â€” not an MCP transport
- * session id â€” so the resulting pointer is resolvable by the device-page chip.
+ * `breezeSessionId` is the persisted `ai_sessions.id` — not an MCP transport
+ * session id — so the resulting pointer is resolvable by the device-page chip.
  * Returns the same reference when the origin is already correct, so a caller
  * that identity-compares is not surprised.
  */
@@ -777,8 +777,8 @@ const APPROVAL_MODES: readonly AiApprovalMode[] = ['per_step', 'action_plan', 'a
 /**
  * Effective approval mode for a session's org (#5593).
  *
- * Resolves through `getEffectiveAiBudget` â€” partner JSONB `aiBudgets`
- * override, then the org's `ai_budgets` row, then `per_step` â€” instead of
+ * Resolves through `getEffectiveAiBudget` — partner JSONB `aiBudgets`
+ * override, then the org's `ai_budgets` row, then `per_step` — instead of
  * reading the org row directly, which silently ignored a partner-wide default.
  * The partner override is free-form JSON, so an unrecognized value is rejected
  * rather than handed to the approval gate. Any failure keeps the previous
@@ -813,7 +813,7 @@ export class StreamingSessionManager {
     // on every tick for the life of the process. This one is a MODULE-LEVEL singleton
     // (bottom of file), constructed at import time with no ambient context, so
     // the sweep starts clean. `markSessionsExpired` still re-enters the escape
-    // per statement â€” that is what actually guarantees the write's context,
+    // per statement — that is what actually guarantees the write's context,
     // and it does not depend on this construction-order accident holding.
     this.evictionTimer = setInterval(() => this.evictStaleSessions(), EVICTION_INTERVAL_MS);
   }
@@ -825,21 +825,21 @@ export class StreamingSessionManager {
    * Returns true if successful, false if session is not in a valid state.
    */
   /**
-   * Claim the session's single turn slot, and â€” atomically with that claim â€”
+   * Claim the session's single turn slot, and — atomically with that claim —
    * attach the reservation that turn will settle.
    *
    * #5557: `budgetReservationId` used to be assigned only when the session was
    * CREATED, so from the second message onward on a warm in-memory session the
    * reservation the route had just taken never reached the settle path: the
-   * turn's spend was recorded unsettled and the hold â€” the org's ENTIRE
-   * remaining cap â€” sat until the 30-minute sweep, locking the tenant out of
+   * turn's spend was recorded unsettled and the hold — the org's ENTIRE
+   * remaining cap — sat until the 30-minute sweep, locking the tenant out of
    * its own budget.
    *
    * The attach belongs HERE and not in `getOrCreate` because `getOrCreate`
    * awaits (`loadApprovalMode`) before returning, so two concurrent callers can
    * attach and then return in the opposite order: the winner of the slot would
-   * be left carrying the LOSER's reservation, and the loser would release it â€”
-   * out from under a live dispatch â€” on its 409 path. This method has no
+   * be left carrying the LOSER's reservation, and the loser would release it —
+   * out from under a live dispatch — on its 409 path. This method has no
    * awaits, so the claim and the attach cannot interleave: whoever takes the
    * slot attaches their own reservation, and every loser releases a reservation
    * that was never attached to anything.
@@ -878,7 +878,7 @@ export class StreamingSessionManager {
     takeGatewayFailureNote(session.breezeSessionId);
     // The state and its staleness clock move together: eviction reads
     // lastActivityAt to tell a live turn from a wedged one, and before this the
-    // stamp was refreshed only in getOrCreate() â€” so a session that had been
+    // stamp was refreshed only in getOrCreate() — so a session that had been
     // sitting idle stayed the LRU victim for the whole turn it was streaming.
     session.lastActivityAt = Date.now();
     return true;
@@ -901,7 +901,7 @@ export class StreamingSessionManager {
        * Bound device from the aiSessions row. When set, the session's
        * effective auth is narrowed to the session org (#3087). Callers whose
        * middleware already pins the auth to one org (helper chat, client AI)
-       * may omit it â€” narrowing would be a no-op there.
+       * may omit it — narrowing would be a no-op there.
        */
       deviceId?: string | null;
       /**
@@ -941,8 +941,8 @@ export class StreamingSessionManager {
       /**
        * W05: this turn deliberately switches model (planModelTransition said
        * `switch_resume`). An idle live query with a different key is
-       * recreated â€” `resume` + this turn's resolved options, never setModel
-       * (spike D3) â€” silently: the user asked for it.
+       * recreated — `resume` + this turn's resolved options, never setModel
+       * (spike D3) — silently: the user asked for it.
        */
       modelSwitch?: boolean;
     },
@@ -956,9 +956,9 @@ export class StreamingSessionManager {
     const key = liveQueryKey(binding);
     const existing = this.sessions.get(breezeSessionId);
     if (existing && existing.state !== 'closed') {
-      // Spec Â§9.2: a live SDK query is reused only while connection id,
+      // Spec §9.2: a live SDK query is reused only while connection id,
       // config_version, catalog revision, wire model and wire fingerprint are
-      // unchanged â€” the subprocess's env and model are fixed at creation.
+      // unchanged — the subprocess's env and model are fixed at creation.
       if (existing.liveKey !== key || existing.forceRecreate) {
         if (existing.state === 'processing') {
           // Rotation applies on the next turn. Reusing the live session here
@@ -976,7 +976,7 @@ export class StreamingSessionManager {
             );
             existing.eventBus.publish({
               type: 'error',
-              message: 'AI provider configuration changed â€” please resend your message',
+              message: 'AI provider configuration changed — please resend your message',
             });
             existing.eventBus.publish({ type: 'done' });
           }
@@ -987,10 +987,10 @@ export class StreamingSessionManager {
       const reusable = this.sessions.get(breezeSessionId);
       if (reusable && reusable.state !== 'closed') {
         // Update per-request context. Device-bound sessions re-narrow the fresh
-        // request auth to the session org every time (#3087) â€” `toolAuth` must
+        // request auth to the session org every time (#3087) — `toolAuth` must
         // never revert to the raw login scope on a follow-up message. Narrow
         // against the freshly-loaded `dbSession.orgId`, not the possibly-stale
-        // `existing.orgId` snapshot captured at session creation â€” this is the
+        // `existing.orgId` snapshot captured at session creation — this is the
         // current DB value, so it survives the device being moved to a
         // different org mid-session.
         // #5022 W01: re-mint the chat origin on the REFRESHED auth. Stamping
@@ -1016,7 +1016,7 @@ export class StreamingSessionManager {
         // Skipped while a turn is in flight: the route answers a concurrent
         // message with 409, and swapping the mode mid-turn would change the
         // gate the running turn already started under. The state is re-checked
-        // AFTER the await as well â€” a concurrent request can transition the
+        // AFTER the await as well — a concurrent request can transition the
         // session to `processing` while this lookup is outstanding, and the
         // assignment must not land behind a turn that already started.
         if (reusable.state !== 'processing') {
@@ -1027,8 +1027,8 @@ export class StreamingSessionManager {
             loadApprovalWaitBudgetMs(dbSession.orgId),
           ]);
           // Re-read through the map rather than the narrowed `reusable` alias:
-          // a concurrent request may have started a turn â€” or evicted the
-          // session entirely â€” while this lookup was outstanding.
+          // a concurrent request may have started a turn — or evicted the
+          // session entirely — while this lookup was outstanding.
           const stateAfterLookup = this.sessions.get(breezeSessionId)?.state;
           if (stateAfterLookup && stateAfterLookup !== 'processing') {
             reusable.approvalMode = refreshedApprovalMode;
@@ -1041,7 +1041,7 @@ export class StreamingSessionManager {
     }
 
     // Wisp W04 Task 4 (structural): every ActiveSession for a grant-pinned
-    // ai_sessions row carries its grant, whichever route built it â€” resolved
+    // ai_sessions row carries its grant, whichever route built it — resolved
     // HERE from the row, not from a caller argument. A reused session (above)
     // already carries it. Fails closed: a pinned row that cannot be resolved
     // (no revision pin, no thread link, lookup error) throws, so the turn is
@@ -1093,13 +1093,13 @@ export class StreamingSessionManager {
       dbSession.writeDefaultOrgId,
     );
 
-    // Tenant (BYO MCP) tools â€” Task A10. Script-builder / client-AI sessions
+    // Tenant (BYO MCP) tools — Task A10. Script-builder / client-AI sessions
     // supply their own `mcpServerFactory` and keep their own (non-Breeze)
     // server, so they never resolve tenant tools.
     //
     // A throw here (a source unreachable, a decrypt failure, a Redis blip in
     // the resolver's own guardrail checks) must not fail the WHOLE chat turn
-    // â€” the MCP surface deliberately degrades per-source (see
+    // — the MCP surface deliberately degrades per-source (see
     // toolSources/discovery.ts), so a session simply loses its tenant tools
     // for this turn rather than erroring out entirely. Mirrors
     // `loadApprovalMode`'s degrade-on-failure shape above.
@@ -1107,7 +1107,7 @@ export class StreamingSessionManager {
     if (!mcpServerFactory) {
       try {
         // `dbSession.orgId` is this session's pinned, already-access-checked
-        // org (see the device-bound comment above) â€” passed as `targetOrgId`
+        // org (see the device-bound comment above) — passed as `targetOrgId`
         // so a partner-scoped tech's session can resolve that org's own tool
         // sources too, not just partner-wide ones (#6023). A no-op for
         // org-scoped `toolAuth`, which ignores `targetOrgId`.
@@ -1140,7 +1140,7 @@ export class StreamingSessionManager {
     // query and processorPromise are filled in after creation.
     const now = Date.now();
     const resumeSdkSessionId = dbSession.sdkSessionId ?? undefined;
-    // W11: the canary is sticky per breeze session â€” the same session keeps
+    // W11: the canary is sticky per breeze session — the same session keeps
     // its variant across query re-creations while the registry is unchanged.
     const promptProvenance = promptProvenanceFor({
       surface: binding.surface, profile: resolved.promptProfile, subjectId: breezeSessionId,
@@ -1230,13 +1230,13 @@ export class StreamingSessionManager {
         // `execute.ts` now threads this org through the dispatch-time
         // OWNER-predicate reload (#6023), a stale `session.orgId` would let a
         // device-bound session keep dispatching a tool under its OLD org's
-        // credentials after the device moved â€” read `session.toolAuth.orgId`
+        // credentials after the device moved — read `session.toolAuth.orgId`
         // (fresh every turn for a device-bound session) and fall back to
         // `session.orgId` only when `toolAuth` carries none (non-device
         // sessions, whose org doesn't drift the same way).
         [
           ...buildTenantSdkTools(tenantDescriptors, () => session.toolAuth, () => session.toolAuth.orgId ?? session.orgId),
-          // W5 PR C: flow tools â€” gated per call (live tier) in createSessionPreToolUse.
+          // W5 PR C: flow tools — gated per call (live tier) in createSessionPreToolUse.
           ...buildFlowSdkTools(flowDescriptors, chatFlowToolRunStarter(() => session)),
         ],
       );
@@ -1257,7 +1257,7 @@ export class StreamingSessionManager {
       effectiveSystemPrompt += modeInstructions[approvalMode] ?? '';
     }
 
-    // â”€â”€ Catalog egress grant (#3922 phase 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Catalog egress grant (#3922 phase 2) ────────────────────────────────
     // A catalog session's subprocess may open exactly one destination, through
     // the local allowlisting CONNECT proxy. The grant must exist BEFORE the
     // child env is built (it carries the proxy URL) and before query() spawns
@@ -1265,12 +1265,12 @@ export class StreamingSessionManager {
     // unproxied child (phase-1 invariant).
     //
     // Taken as late as possible, immediately before the try/catch that
-    // releases it: anything that throws between the grant and that catch â€”
-    // `mcpServerFactory`, `createBreezeMcpServer` â€” would otherwise leak the
+    // releases it: anything that throws between the grant and that catch —
+    // `mcpServerFactory`, `createBreezeMcpServer` — would otherwise leak the
     // grant until the process restarted, since `remove()` never runs for a
     // session that was never registered.
     // Shared with agent runs (aiModels/connectionFactory.prepareSdkChild, the
-    // one SDK-child seam): the child env plus every grant it needs â€” an
+    // one SDK-child seam): the child env plus every grant it needs — an
     // audited CONNECT grant for a catalog connection, a gateway grant and a
     // deny-all proxy grant for a gateway connection (W06), nothing otherwise.
     const child = await prepareSdkChild(resolved, {
@@ -1282,7 +1282,7 @@ export class StreamingSessionManager {
     // Durable per-session provenance (#3922 phase 2). `billing_source` stays
     // 'partner_key' for direct and catalog BYOK alike, so these two columns are
     // the only record in the ledger of WHICH third party processed a session's
-    // content â€” and of which immutable revision's URL/model map/pricing it ran
+    // content — and of which immutable revision's URL/model map/pricing it ran
     // under. Written on every create (including back to NULL when a partner
     // unpins and the session rotates) so the row can never describe a routing
     // the session is no longer using. Best-effort: provenance bookkeeping must
@@ -1295,7 +1295,7 @@ export class StreamingSessionManager {
     // `dbWriteExpectingRows` so that 0-row case is loud, because the two
     // directions of this write fail asymmetrically: a lost STAMP leaves a row
     // with no claim (under-reported), while a lost CLEAR leaves a row still
-    // claiming a catalog the session no longer uses â€” a FALSE provenance
+    // claiming a catalog the session no longer uses — a FALSE provenance
     // claim, and the worse of the two. The row count is the only thing that
     // makes either detectable.
     try {
@@ -1347,7 +1347,7 @@ export class StreamingSessionManager {
           prompt: inputController.getInputStream(),
           options: {
             systemPrompt: renderSystemPrompt(effectiveSystemPrompt, session.promptProvenance),
-            // model (the resolver's wire id â€” a catalog endpoint's own id),
+            // model (the resolver's wire id — a catalog endpoint's own id),
             // fallbackModel (the refusal fallback) and thinking/effort: all
             // from the resolved model, nothing derived here.
             ...sdkModelOptions(resolved),
@@ -1384,7 +1384,7 @@ export class StreamingSessionManager {
       });
     } catch (err) {
       // The subprocess never started (a rejected child env, a query() throw).
-      // Release the egress grant here â€” the session was never registered in
+      // Release the egress grant here — the session was never registered in
       // `this.sessions`, so `remove()` will never run for it and the grant
       // would leak until the process restarted. The grant is taken immediately
       // above this block precisely so there is no un-covered window.
@@ -1429,7 +1429,7 @@ export class StreamingSessionManager {
     // Abort the SDK's AbortController first to signal in-flight MCP tool
     // handlers to stop. This prevents the race where handleControlRequest
     // completes after the subprocess is killed and tries to write a response
-    // to the dead ProcessTransport â€” crashing the process.
+    // to the dead ProcessTransport — crashing the process.
     try { session.abortController.abort(); } catch (err) {
       captureException(err); console.error('[StreamingSessionManager] Failed to abort session controller:', sessionId, err);
     }
@@ -1437,8 +1437,8 @@ export class StreamingSessionManager {
       captureException(err); console.error('[StreamingSessionManager] Failed to close SDK query:', sessionId, err);
     }
     // Release the child's grants (catalog CONNECT allowance; gateway grant +
-    // deny-all proxy grant). Done on every teardown path â€” rotation, eviction,
-    // processor exit â€” so a session that is going away cannot keep a tunnel
+    // deny-all proxy grant). Done on every teardown path — rotation, eviction,
+    // processor exit — so a session that is going away cannot keep a tunnel
     // to the provider, or a gateway grant, open.
     try { session.revokeEgressGrant?.(); } catch (err) {
       captureException(err); console.error('[StreamingSessionManager] Failed to revoke LLM egress grant:', sessionId, err);
@@ -1498,7 +1498,7 @@ export class StreamingSessionManager {
     // 5 min by default) always leave headroom for the model to emit its
     // closing message before the turn timeout (budget + 60s) fires.
     // Guarded: never reset while a wait is actually in flight (waits only run
-    // in the tool phase, between assistant messages) â€” EXCEPT when the
+    // in the tool phase, between assistant messages) — EXCEPT when the
     // deadline is already exhausted, where an in-flight wait is settling
     // within milliseconds anyway and skipping the reset would poison every
     // later cycle with a permanently zero budget.
@@ -1550,7 +1550,7 @@ export class StreamingSessionManager {
   /**
    * Topology M4 Task 3: end a topology turn. Only a validated (or the fixed
    * fallback / scope-changed) explanation is published, and only an
-   * `explanation`/`fallback` outcome is persisted â€” as the structured answer,
+   * `explanation`/`fallback` outcome is persisted — as the structured answer,
    * never raw text. Failure, cancellation and cap paths discard.
    */
   private async finishTopologyTurn(session: ActiveSession, succeeded: boolean): Promise<void> {
@@ -1621,7 +1621,7 @@ export class StreamingSessionManager {
     let messageStarted = false;
     // #5106: whether a text content block has already started for the
     // CURRENT assistant message. A turn can be text -> tool_use -> text (the
-    // model narrates, calls a tool, then reports back) â€” without a separator
+    // model narrates, calls a tool, then reports back) — without a separator
     // between the two text blocks, every client concatenates them raw
     // ("...last night.Here's a summary"). Reset at message_start, alongside
     // `messageStarted` above.
@@ -1681,7 +1681,7 @@ export class StreamingSessionManager {
               currentMessageId = crypto.randomUUID();
               messageStarted = true;
               sawTextBlockThisMessage = false;
-              // Reset turn timeout â€” SDK is actively producing output
+              // Reset turn timeout — SDK is actively producing output
               this.startTurnTimeout(session);
               // Same signal, for eviction: a new assistant message is stream
               // progress. Unlike the OpenAI twin, a turn here can run entirely
@@ -1697,14 +1697,14 @@ export class StreamingSessionManager {
                 // Stream progress keeps the turn alive for eviction purposes.
                 session.lastActivityAt = Date.now();
                 // Topology M4: raw provider text goes to the server-only output
-                // gate at THIS publish point â€” never onto the bus/replay ring.
+                // gate at THIS publish point — never onto the bus/replay ring.
                 if (session.topologyInvestigation) session.topologyInvestigation.append(event.delta.text);
                 else session.eventBus.publish({ type: 'content_delta', delta: event.delta.text });
               }
             } else if (event.type === 'content_block_start') {
               if ('content_block' in event
                 && (event.content_block.type === 'thinking' || event.content_block.type === 'redacted_thinking')) {
-                // W05: never a silent pause while the model reasons (spec Â§11).
+                // W05: never a silent pause while the model reasons (spec §11).
                 // The block's text is empty without `thinkingDisplay` (W01 D1),
                 // so the stream carries a state, not text. Topology turns
                 // publish fixed phases only and are excluded.
@@ -1734,7 +1734,7 @@ export class StreamingSessionManager {
               } else if (
                 'content_block' in event
                 && event.content_block.type === 'tool_use'
-                // A-W04: ToolSearch never reaches the MCP hooks â€” queueing it
+                // A-W04: ToolSearch never reaches the MCP hooks — queueing it
                 // would misattribute the next postToolUse and turn its result
                 // into a #3094 "rejected before execution" drop.
                 && !isSdkBuiltinToolUse(event.content_block.name)
@@ -1797,7 +1797,7 @@ export class StreamingSessionManager {
 
             // Topology M4: bounded per-call input and cumulative output; the
             // raw assistant content and tool_use rows are NEVER persisted or
-            // republished â€” only the validated answer is, at `result`.
+            // republished — only the validated answer is, at `result`.
             if (session.topologyInvestigation) {
               const withinBudget = session.topologyInvestigation.noteUsage({
                 inputTokens: (apiUsage?.input_tokens ?? 0) + (apiUsage?.cache_read_input_tokens ?? 0) + (apiUsage?.cache_creation_input_tokens ?? 0),
@@ -1815,8 +1815,8 @@ export class StreamingSessionManager {
             // history is byte-for-byte identical to what streamed clients saw.
             //
             // #9534: a synthetic API-error message (it carries `error`) is the
-            // CLI's own text, not model output â€” for a 401 it reads "Invalid
-            // API key Â· Fix external API key", a Claude Code CTA that points a
+            // CLI's own text, not model output — for a 401 it reads "Invalid
+            // API key · Fix external API key", a Claude Code CTA that points a
             // hosted user at a BYO-key page. Persist the same fixed,
             // client-safe text the live turn's error event carries instead, so
             // a reload explains the empty turn without leaking provider text.
@@ -1843,7 +1843,7 @@ export class StreamingSessionManager {
                     role: 'assistant',
                     content: assistantContent || null,
                     // SR5-16: the assistant content blocks embed each tool_use's
-                    // raw `input`, so redact those here too â€” otherwise the same
+                    // raw `input`, so redact those here too — otherwise the same
                     // plaintext secret persisted below in `tool_input` would still
                     // land here in cleartext.
                     contentBlocks: (syntheticErrorText !== null
@@ -1871,8 +1871,8 @@ export class StreamingSessionManager {
                   : block.name;
                 // SR5-16: mask known-sensitive keys (accessKey, secretKey,
                 // password, token, apiKey, clientSecret, privateKey,
-                // connectionString, â€¦) before persisting OR publishing.
-                // Unconditional â€” this runs even for tool calls the user
+                // connectionString, …) before persisting OR publishing.
+                // Unconditional — this runs even for tool calls the user
                 // later denies, and for the live SSE copy below.
                 const redactedInput = redactSensitiveToolInput(block.input as Record<string, unknown>);
 
@@ -1895,7 +1895,7 @@ export class StreamingSessionManager {
 
                 // Sweep E6: the `tool_use_start` published earlier for this
                 // same block carried `input: {}` (real args aren't known at
-                // content_block_start) â€” now that they are, tell the live
+                // content_block_start) — now that they are, tell the live
                 // client so its tool row's label/preview matches what a
                 // history reload of the row just persisted above would show.
                 session.eventBus.publish({
@@ -1915,11 +1915,11 @@ export class StreamingSessionManager {
             // running is visible: when the SDK rejects a tool call before
             // dispatch (e.g. a -32602 input-schema validation failure), the
             // model is fed an error tool_result while preToolUse/postToolUse
-            // never fire â€” historically leaving NO ai_messages row, NO SSE
+            // never fire — historically leaving NO ai_messages row, NO SSE
             // event (issue #3094: a set_device_context call with a
             // parenthesized details value vanished from the transcript while
             // the model saw a validation error and silently retried). Detect
-            // exactly those orphans â€” a tool_result whose tool_use id is still
+            // exactly those orphans — a tool_result whose tool_use id is still
             // pending. A call that ran recorded its result, keyed by its own
             // id, before the MCP call returned, so it is never pending here
             // whichever of its stream event and its result came first
@@ -1965,14 +1965,14 @@ export class StreamingSessionManager {
             // recovered never surfaces on a later turn.
             const gatewayNote = this.takeTurnGatewayNote(session);
             // #3095: use the session's canonical org id (from the aiSessions DB
-            // row â€” always set), NOT `auth.orgId`, which is null for partner-
+            // row — always set), NOT `auth.orgId`, which is null for partner-
             // and system-scoped users. The old guard on `auth.orgId` silently
             // skipped usage recording for EVERY turn of every session run by a
             // partner-scoped technician, leaving ai_sessions token counters at 0.
             const orgId = session.orgId;
 
             if (!orgId) {
-              console.warn('[StreamingSessionManager] Skipping usage recording â€” no orgId on session', session.breezeSessionId);
+              console.warn('[StreamingSessionManager] Skipping usage recording — no orgId on session', session.breezeSessionId);
               session.eventBus.publish({ type: 'done' });
               session.state = 'idle';
               break;
@@ -2021,7 +2021,7 @@ export class StreamingSessionManager {
             }
 
             // W03: ONE cost, from the registry rate bound to this turn, over the
-            // per-model DELTA of the SDK's cumulative modelUsage (W05 spike) â€”
+            // per-model DELTA of the SDK's cumulative modelUsage (W05 spike) —
             // never total_cost_usd, so #7667's running-total problem cannot
             // recur. The Office per-user ledger, the `done` event and the org
             // settlement all read this one number.
@@ -2031,21 +2031,21 @@ export class StreamingSessionManager {
               session.eventBus.publish({ type: 'error', message: isErrorSuccessMessage });
             }
 
-            // Â§9.1a: a refused final answer is explained, never a silent empty
+            // §9.1a: a refused final answer is explained, never a silent empty
             // turn. Topology turns never stream model text (their gate fails
             // through finishTopologyTurn); the ledger still records the refusal.
             if (turn.outcome.refused && !topologyTurn) {
               await this.publishRefusal(session, turn.outcome.refusalCategory);
             }
 
-            // W05 (spike constraint 5): what actually ran â€” the served model and
-            // applied options from the turn's OUTCOME, never the request â€” then
+            // W05 (spike constraint 5): what actually ran — the served model and
+            // applied options from the turn's OUTCOME, never the request — then
             // persisted so a reload shows exactly what was published.
             if (!topologyTurn) {
               await this.publishTurnModel(session, turnBinding, turnDisplay, turn.outcome);
             }
 
-            // Signal this turn is done, but DON'T close the event bus â€”
+            // Signal this turn is done, but DON'T close the event bus —
             // session stays alive for follow-up messages. Carries usage so
             // client surfaces can render turn cost (turn_complete).
             session.eventBus.publish({
@@ -2088,7 +2088,7 @@ export class StreamingSessionManager {
       await this.abortTopologyTurn(session);
       // A turn that ended without a `result` (teardown mid-turn, subprocess
       // crash, iterator error) settles as `no_result` (W05 spike): ZERO billed,
-      // usage_unconfirmed, the session's SDK usage snapshot left where it was â€”
+      // usage_unconfirmed, the session's SDK usage snapshot left where it was —
       // so a resumed query's next delta picks up whatever the CLI persisted
       // (under-bill, never double-bill). Settling it releases the turn's
       // reservation instead of holding it for the indeterminate TTL. Awaited:
@@ -2102,7 +2102,7 @@ export class StreamingSessionManager {
       }
 
       // Only when a settlement failed AND marking it indeterminate at the time
-      // failed too: retry the mark â€” never a re-settle (S5).
+      // failed too: retry the mark — never a re-settle (S5).
       for (const reservationId of session.unsettledReservationIds?.splice(0) ?? []) {
         try {
           // N12: no context wrap. markAiBudgetReservationIndeterminate opens its
@@ -2132,10 +2132,10 @@ export class StreamingSessionManager {
    * return the numbers every other consumer reports. `result` null = the turn
    * ended without one (abandoned / aborted): settled as `no_result`, zero.
    *
-   * 1. the breeze session's previous SDK usage snapshot (W05 spike) â€” a turn
+   * 1. the breeze session's previous SDK usage snapshot (W05 spike) — a turn
    *    whose snapshot cannot be read is settled as `no_result` too (never
    *    billed from an unknown baseline; the next turn's delta recovers it);
-   * 2. sdkTurnUsage â†’ per-model deltas of the cumulative modelUsage + the
+   * 2. sdkTurnUsage → per-model deltas of the cumulative modelUsage + the
    *    refusal outcome (served model as observed, never assumed);
    * 3. the registry quote (the same rate selection settleInvocation bills);
    * 4. the Office per-user hook FIRST (#5557: the client sub-cap must never
@@ -2231,7 +2231,7 @@ export class StreamingSessionManager {
           usageNote: turn.usageNote,
         },
       });
-      // S1: deferred but not persisted â€” recorded nowhere. Keep the
+      // S1: deferred but not persisted — recorded nowhere. Keep the
       // reservation held (indeterminate); settleInvocation already reported it.
       if (settled.unrecorded && reservationId) await this.retainUnsettled(session, reservationId);
     } catch (err) {
@@ -2264,8 +2264,8 @@ export class StreamingSessionManager {
 
   /**
    * W05: close an outstanding `thinking_state: started` (idempotent). Every
-   * turn end â€” result, error, timeout, teardown â€” calls this, so a client is
-   * never left showing "Thinkingâ€¦" over a finished turn.
+   * turn end — result, error, timeout, teardown — calls this, so a client is
+   * never left showing "Thinking…" over a finished turn.
    */
   /**
    * The gateway's reason for this turn's failure, removed as it is read. A
@@ -2313,7 +2313,7 @@ export class StreamingSessionManager {
   }
 
   /**
-   * Â§9.1a: persist + stream the refusal explanation as ordinary message events
+   * §9.1a: persist + stream the refusal explanation as ordinary message events
    * (every client renders it) plus the structured `model_refusal` event.
    */
   private async publishRefusal(session: ActiveSession, category: string | null): Promise<void> {
@@ -2405,7 +2405,7 @@ export class StreamingSessionManager {
       : { error: errorText, droppedBeforeExecution: true };
 
     console.warn(
-      `[StreamingSessionManager] Tool call ${toolName} (${toolUseId}) was rejected before the MCP handler ran â€” recording explicit error tool_result`,
+      `[StreamingSessionManager] Tool call ${toolName} (${toolUseId}) was rejected before the MCP handler ran — recording explicit error tool_result`,
     );
 
     // SSE first (mirrors createSessionPostToolUse): the UI must receive the
@@ -2435,7 +2435,7 @@ export class StreamingSessionManager {
     }
 
     // Auto-flag the session (first failure only) so flagged-session review
-    // surfaces these drops â€” mirrors postToolUse's tool-failure flag.
+    // surfaces these drops — mirrors postToolUse's tool-failure flag.
     try {
       await withDbAccessContext(
         { scope: 'organization', orgId: session.orgId, accessibleOrgIds: [session.orgId] },
@@ -2443,7 +2443,7 @@ export class StreamingSessionManager {
           db.update(aiSessions)
             .set({
               flaggedAt: new Date(),
-              flagReason: `Tool rejected before execution: ${toolName} â€” ${errorText.slice(0, 300)}`,
+              flagReason: `Tool rejected before execution: ${toolName} — ${errorText.slice(0, 300)}`,
             })
             .where(and(
               eq(aiSessions.id, session.breezeSessionId),
@@ -2469,7 +2469,7 @@ export class StreamingSessionManager {
    * was already receiving, and the assistant text produced so far is lost
    * without ever being persisted.
    *
-   * Liveness is `state` AND recent progress, never `state` alone â€” see
+   * Liveness is `state` AND recent progress, never `state` alone — see
    * PROCESSING_STALL_TIMEOUT_MS for why a wedged turn must stay reclaimable.
    */
   private isTurnInFlight(session: ActiveSession, now: number): boolean {
@@ -2487,12 +2487,12 @@ export class StreamingSessionManager {
    * start a new one, so leaving `status = 'active'` strands the row and every
    * caller keyed on active sessions overcounts. This mirrors what
    * `runPreFlightChecks` would have written lazily on the next request
-   * (services/aiAgentSdk.ts) â€” eviction just stops deferring it.
+   * (services/aiAgentSdk.ts) — eviction just stops deferring it.
    *
    * `runOutsideDbContextSafe` is re-entered on EVERY iteration, never once
    * around the loop. `withDbAccessContext` JOINS an already-open context
    * instead of replacing it (db/index.ts), and `AsyncLocalStorage.exit()`
-   * covers the synchronous call plus what it schedules â€” but an iteration
+   * covers the synchronous call plus what it schedules — but an iteration
    * resuming after `await` sees the caller's ambient context live again, so a
    * single hoisted escape would leave orgs 2..N running under someone else's
    * GUCs, matching zero rows under RLS while reporting success. Today the only
@@ -2515,7 +2515,7 @@ export class StreamingSessionManager {
       for (const [orgId, sessionIds] of sessionIdsByOrg) {
         try {
           // `.returning()` + dbWriteExpectingRows because an UPDATE evaluated
-          // under the WRONG tenant's GUCs does not raise under forced RLS â€” it
+          // under the WRONG tenant's GUCs does not raise under forced RLS — it
           // matches zero rows and reports success. That is exactly the failure
           // the context escape exists to prevent, so it has to be observable
           // rather than assumed. A partial count is normal (the
@@ -2546,7 +2546,7 @@ export class StreamingSessionManager {
           // 'active', which is the very defect this helper exists to fix.
           //
           // `org_id` IS in sentry.ts's ALLOWED_TAG_NAMES and survives the
-          // scrubber, so it goes on the event â€” without it every org's failure
+          // scrubber, so it goes on the event — without it every org's failure
           // collapses into one untriageable Sentry issue and the on-call has to
           // go log-diving to learn which tenant is stranded. The SESSION ids are
           // the part the allowlist voids, so those stay in the log line only.
@@ -2580,7 +2580,7 @@ export class StreamingSessionManager {
         // Applies to the 24h hard cap too: a session that reaches it mid-stream
         // is evicted on the first tick after its turn ends (bounded by
         // SDK_TURN_TIMEOUT_MS, not by this interval). Turns cannot chain to
-        // hold it open indefinitely â€” runPreFlightChecks enforces the same 24h
+        // hold it open indefinitely — runPreFlightChecks enforces the same 24h
         // cap before any NEW turn starts, so the slip is one turn at most.
         // Deferring briefly beats cutting an answer off mid-sentence.
         if (this.isTurnInFlight(session, now)) continue;
@@ -2628,7 +2628,7 @@ export class StreamingSessionManager {
 
     if (!oldest) {
       // Every session is mid-turn. Overshooting the soft cap is self-correcting
-      // â€” the next getOrCreate reclaims space as soon as any turn ends â€” while
+      // — the next getOrCreate reclaims space as soon as any turn ends — while
       // corrupting a live turn is not. But the cap IS being breached and the
       // caller proceeds to add anyway, so this is a resource-exhaustion signal
       // and must reach more than stdout. Throttled: under sustained pressure
@@ -2640,7 +2640,7 @@ export class StreamingSessionManager {
         this.lastCapacityAlarmAt = now;
         // The magnitude has to ride on a TAG: `scrubEvent` deletes `message`
         // from every outbound event, so without this a single-request blip and a
-        // sustained runaway produce byte-identical Sentry issues â€” and the
+        // sustained runaway produce byte-identical Sentry issues — and the
         // difference is exactly what decides whether anyone should be paged.
         captureMessage('AI session cap exceeded: every session mid-turn', {
           eventCode: 'ai_session_cap_all_in_flight',
@@ -2661,7 +2661,7 @@ export class StreamingSessionManager {
     // staleness paths, an LRU victim is a perfectly usable conversation dropped
     // for OUR capacity reasons: history lives in ai_messages and the session
     // resumes from `sdkSessionId`, so the user's next message transparently
-    // recreates it â€” exactly like a deploy, which shutdown() is likewise
+    // recreates it — exactly like a deploy, which shutdown() is likewise
     // careful not to expire. Stamping 'expired' here would turn a transient
     // server condition into a hard 410 for a conversation minutes old, since
     // runPreFlightChecks rejects on status before getOrCreate ever runs. The
