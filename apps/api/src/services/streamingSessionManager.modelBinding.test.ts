@@ -80,6 +80,7 @@ vi.mock('./aiAgentSdkTools', () => ({
   BREEZE_MCP_TOOL_NAMES: ['mcp__breeze__query_devices'],
   // #11395: read only under a constrained tool profile.
   listChatSurfaceToolNames: () => ['query_devices', 'set_device_context'],
+  listBreezeServerToolNames: () => ['query_devices', 'set_device_context'],
   chatToolDomain: () => undefined,
 }));
 vi.mock('./aiAgentSdk', () => ({

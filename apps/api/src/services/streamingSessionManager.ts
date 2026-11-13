@@ -55,7 +55,7 @@ import { describeTurnModel, persistLastTurnModel, turnDisplayFrom, type TurnDisp
 import { sanitizeErrorForClient } from './aiAgent';
 import { captureException, captureMessage } from './sentry';
 import { storeSdkSessionPointer } from './aiSdkSessionPointer';
-import { createBreezeMcpServer, BREEZE_MCP_TOOL_NAMES, chatToolDomain, listChatSurfaceToolNames } from './aiAgentSdkTools';
+import { createBreezeMcpServer, BREEZE_MCP_TOOL_NAMES, chatToolDomain, listBreezeServerToolNames } from './aiAgentSdkTools';
 import type { TopologyTurnRuntime } from './topology/aiInvestigation';
 import { createSessionPreToolUse, createSessionPostToolUse, settleApprovalWaits } from './aiAgentSdk';
 import type { RequestLike } from './auditEvents';
@@ -1176,7 +1176,7 @@ export class StreamingSessionManager {
       facts: toolFacts,
       allowedTools,
       // Lambdas, not references: read only under a constrained profile.
-      registryNames: () => listChatSurfaceToolNames(),
+      registryNames: () => listBreezeServerToolNames(),
       breezeServer: !mcpServerFactory || options?.registersBreezeServer === true,
       domainOf: (name) => chatToolDomain(name),
       extraTools: [

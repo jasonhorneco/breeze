@@ -20,7 +20,7 @@
  * bound to anything that can run.
  */
 import type { AiAgentRunProfile } from '@breeze/shared';
-import { breezeServerTools, chatToolDomain, listChatSurfaceToolNames } from '../../aiAgentSdkTools';
+import { breezeServerTools, chatToolDomain, listChatSurfaceToolNames, listBreezeServerToolNames } from '../../aiAgentSdkTools';
 import { applyRunToolProfile, resolveRunToolProfile } from '../../aiAgents/runToolProfile';
 import { buildOutcomeSdkTools } from '../../aiAgents/outcomeTools';
 import { composeConstrainedSystemPrompt, composeStaticSystemPrompt } from '../../aiToolIndex';
@@ -149,7 +149,7 @@ export function advertisedRequestForFacts(
     surface: kind,
     facts,
     allowedTools: kind === 'chat' ? undefined : surface.allowedTools,
-    registryNames: listChatSurfaceToolNames,
+    registryNames: listBreezeServerToolNames,
     breezeServer: true,
     domainOf: chatToolDomain,
     extraTools: tenantDescriptors.map((d) => ({ name: d.qualifiedName, domain: 'integrations' as const })),

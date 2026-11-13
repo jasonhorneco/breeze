@@ -206,6 +206,7 @@ vi.mock('./aiAgentSdkTools', () => ({
   BREEZE_MCP_TOOL_NAMES: [],
   // #11395: read by the preflight only under a constrained chat tool profile.
   listChatSurfaceToolNames: () => ['query_devices', 'get_device_details', 'set_device_context', 'execute_command'],
+  listBreezeServerToolNames: () => ['query_devices', 'get_device_details', 'set_device_context', 'execute_command'],
   chatToolDomain: () => undefined,
 }));
 

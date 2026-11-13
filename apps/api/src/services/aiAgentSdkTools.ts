@@ -793,6 +793,11 @@ export function listChatSurfaceToolNames(): string[] {
   return [...names].sort();
 }
 
+/** Exact SDK declarations, including session-only bridges such as native action plans. */
+export function listBreezeServerToolNames(): string[] {
+  return [...new Set(breezeToolTemplate().declarations.map((t) => t.name))].sort();
+}
+
 /** #11393: a registry tool's domain, for a `custom` tool profile's domain allow-list. */
 export function chatToolDomain(name: string): AiToolDomain | undefined {
   return getToolDomain(name);

@@ -13,7 +13,8 @@ vi.mock('@anthropic-ai/claude-agent-sdk', async (importOriginal) => {
   return { ...actual, createSdkMcpServer: vi.fn((options: unknown) => options) };
 });
 
-import { createBreezeMcpServer } from './aiAgentSdkTools';
+import { createBreezeMcpServer, listBreezeServerToolNames, chatToolDomain } from './aiAgentSdkTools';
+import { finalizeSessionToolExposure } from './aiModels/sessionToolExposure';
 import { getToolCompactDescription } from './aiTools';
 import type { ActiveSession } from './streamingSessionManager';
 import type { ToolExposure } from './aiModels/toolExposure';
@@ -31,6 +32,19 @@ const serve = (...args: Parameters<typeof createBreezeMcpServer>) => createBreez
 const sessionWith = (e: ToolExposure | undefined) => () => ({ toolExposure: e }) as unknown as ActiveSession;
 
 describe('createBreezeMcpServer under a tool exposure (#11395)', () => {
+  it('retains the native session-only action-plan bridge under a constrained chat profile', () => {
+    const resolved = finalizeSessionToolExposure({
+      surface: 'chat', facts: { toolProfile: 'minimal', toolAllowlist: null, effectiveWindow: null, transport: 'gateway' },
+      allowedTools: undefined, registryNames: listBreezeServerToolNames, breezeServer: true,
+      domainOf: chatToolDomain, extraTools: [],
+    });
+    expect(resolved.exposure.names).toContain('propose_action_plan');
+    const server = serve(fakeAuth as never, undefined, undefined, undefined, [], {
+      onlyTools: resolved.onlyTools, toolExposure: resolved.exposure,
+    });
+    expect(server.tools.map(t => t.name)).toContain('propose_action_plan');
+  });
+
   it('no exposure: registers and describes exactly as before', () => {
     const plain = serve(fakeAuth as never);
     const withIdentity = serve(fakeAuth as never, undefined, undefined, sessionWith(exposure({ names: null, promptMode: 'standard' })));

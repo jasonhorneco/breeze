@@ -58,6 +58,7 @@ vi.mock('./aiAgentSdkTools', () => ({
   createBreezeMcpServer: vi.fn(() => ({ type: 'sdk' })),
   BREEZE_MCP_TOOL_NAMES: ['mcp__breeze__set_device_context', 'mcp__breeze__execute_command'],
   listChatSurfaceToolNames: () => SURFACE_TOOLS,
+  listBreezeServerToolNames: () => SURFACE_TOOLS,
   chatToolDomain: (name: string) => (name === 'query_devices' ? 'devices' : undefined),
 }));
 vi.mock('./toolSources/resolver', () => ({

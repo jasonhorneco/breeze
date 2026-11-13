@@ -558,8 +558,8 @@ type PreFlightSession = NonNullable<Awaited<ReturnType<typeof getSession>>>;
 async function chatPromptExposureFor(model: ResolvedModel): Promise<ToolExposure | undefined> {
   if (model.surface !== 'chat' || !model.toolProfileFacts) return undefined;
   if (effectiveToolProfile(model.toolProfileFacts, 'chat').profile === 'full') return undefined;
-  const { listChatSurfaceToolNames, chatToolDomain } = await import('./aiAgentSdkTools');
-  return chatPromptExposure(model.toolProfileFacts, { registryNames: listChatSurfaceToolNames, domainOf: chatToolDomain });
+  const { listBreezeServerToolNames, chatToolDomain } = await import('./aiAgentSdkTools');
+  return chatPromptExposure(model.toolProfileFacts, { registryNames: listBreezeServerToolNames, domainOf: chatToolDomain });
 }
 
 export async function runPreFlightChecks(
