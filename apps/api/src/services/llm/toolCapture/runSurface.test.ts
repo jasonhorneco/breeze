@@ -315,7 +315,7 @@ describe('exposure-aware capture: --profile (#11395)', () => {
   it('chat --profile minimal registers exactly the curated set + set_device_context, the compact prompt, no tool search', async () => {
     queryMock.mockReturnValueOnce(messages([]));
     const result = await runSurfaceCapture({ ...baseOpts, profile: 'minimal', toolSearchOverride: 'on' });
-    const expected = [...CHAT_MINIMAL_TOOLS, 'set_device_context'].sort();
+    const expected = [...CHAT_MINIMAL_TOOLS, 'set_device_context', 'propose_action_plan'].sort();
     expect(result.registeredToolNames).toEqual(expected);
     const options = queryMock.mock.lastCall![0].options;
     expect([...options.allowedTools].sort()).toEqual(expected.map((n) => `mcp__breeze__${n}`));

@@ -167,7 +167,9 @@ export function advertisedRequestForFacts(
     ? (constrained ? composeConstrainedSystemPrompt(exposure.names!) : composeStaticSystemPrompt(listChatSurfaceToolNames()))
     : getCaptureSystemPrompt(surface);
   const baseAllowed = kind === 'chat'
-    ? [...surface.allowedTools, ...tenantMcpToolNames(tenantDescriptors)]
+    ? (constrained
+      ? [...exposure.names!, ...exposure.extraToolNames].map((n) => `mcp__breeze__${n}`)
+      : [...surface.allowedTools, ...tenantMcpToolNames(tenantDescriptors)])
     : surface.allowedTools;
   return finish(surface, exposure, system, tools, baseAllowed);
 }
