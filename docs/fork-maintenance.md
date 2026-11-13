@@ -17,6 +17,12 @@ Do not enable automatic production updates from upstream or from a moving branch
 Deploy immutable image identifiers and retain the previous identifiers and exact
 deployment configuration for rollback.
 
+When exporting release sources from Windows, use
+`git -c core.autocrlf=false -c core.eol=lf archive` and verify extracted bytes
+against the committed blobs. Default Windows archive settings can convert SQL
+line endings. Compare every shipped migration with the running release before
+activation; matching filenames or database versions alone are insufficient.
+
 ## Batched update process
 
 1. Log the observed problem, source evidence, impact and acceptance condition in
