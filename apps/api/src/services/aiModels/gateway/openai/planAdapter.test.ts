@@ -19,7 +19,7 @@ function completed() {
   return new Response(encodeSse('response.completed', {
     type: 'response.completed', response: {
       status: 'completed', model,
-      output: [{ type: 'message', content: [{ type: 'output_text', text: 'Read the stored evidence.' }] }],
+      output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Read the stored evidence.' }] }],
       usage: { input_tokens: 20, output_tokens: 5 },
     },
   }), { headers: { 'content-type': 'text/event-stream' } });
