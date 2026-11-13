@@ -6,6 +6,13 @@ const off = (id: string, funding: 'platform' | 'partner_key', displayName = id) 
 const OPTIONS = [off('p2', 'platform', 'Sonnet 5.5'), off('k', 'partner_key', 'Own key: Opus 5.5'), off('p3', 'platform', 'Haiku 4.5')];
 
 describe('FallbackListEditor', () => {
+  it('accepts subscription funding without offering paid cross-funding choices by default', () => {
+    render(<FallbackListEditor rowKey="chat" value={[]} options={OPTIONS} referenceFunding="chatgpt_plan" crossFunding={false} onChange={vi.fn()} />);
+    const select = screen.getByTestId('ai-defaults-fallback-add-chat') as HTMLSelectElement;
+    expect([...select.options].map(o => o.value)).toEqual(['']);
+    expect(select.disabled).toBe(true);
+  });
+
   it('adds only same-funding models while crossing is off, and every model once it is on', () => {
     const { rerender } = render(<FallbackListEditor rowKey="chat" value={[]} options={OPTIONS} referenceFunding="platform" crossFunding={false} onChange={vi.fn()} />);
     const values = () => [...(screen.getByTestId('ai-defaults-fallback-add-chat') as HTMLSelectElement).options].map((o) => o.value);

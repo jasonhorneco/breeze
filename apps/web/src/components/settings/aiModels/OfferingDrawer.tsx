@@ -30,10 +30,14 @@ type RateKey = (typeof RATE_KEYS)[number];
 type RateDraft = Record<RateKey, string>;
 
 // Literal key maps: the i18n keyUsage test cannot check template keys.
-const EFFORT_KEYS = {
+const EFFORT_KEYS: Partial<Record<Effort, string>> = {
   low: 'aiModels.offering.effort.low', medium: 'aiModels.offering.effort.medium', high: 'aiModels.offering.effort.high',
   xhigh: 'aiModels.offering.effort.xhigh', max: 'aiModels.offering.effort.max',
 } as const;
+const effortLabel = (level: Effort, t: TFunction): string => {
+  const key = EFFORT_KEYS[level];
+  return key ? t(/* i18n-dynamic */ key) : level;
+};
 const DISPLAY_KEYS = {
   omitted: 'aiModels.offering.display.omitted', summarized: 'aiModels.offering.display.summarized', updates: 'aiModels.offering.display.updates',
 } as const;
@@ -378,7 +382,7 @@ export default function OfferingDrawer({ offering, offerings, envManaged = false
                 <label key={level} className="flex items-center gap-1.5 text-sm">
                   <input type="checkbox" data-testid={`ai-offering-allowed-effort-${level}`} checked={draft.efforts.includes(level)}
                     onChange={(e) => toggleEffort(level, e.target.checked)} />
-                  {t(/* i18n-dynamic */ EFFORT_KEYS[level])}
+                  {effortLabel(level, t)}
                 </label>
               ))}
             </div>
@@ -392,7 +396,7 @@ export default function OfferingDrawer({ offering, offerings, envManaged = false
               <select id="ai-offering-default-effort" data-testid="ai-offering-default-effort" className={inputClass} value={draft.defaultEffort}
                 disabled={saving} onChange={(e) => set({ defaultEffort: e.target.value as '' | Effort })}>
                 <option value="">{t('aiModels.offering.providerDefault')}</option>
-                {effortOptions.map((l) => <option key={l} value={l}>{t(/* i18n-dynamic */ EFFORT_KEYS[l])}</option>)}
+                {effortOptions.map((l) => <option key={l} value={l}>{effortLabel(l, t)}</option>)}
               </select>
             </div>
           )}

@@ -10,7 +10,7 @@ export interface FallbackListEditorProps {
   /** Eligible enabled offerings for this row (tool-filtered, permitted-filtered, never the row's own default). */
   options: Array<Pick<AiOfferingDto, 'id' | 'displayName' | 'funding'>>;
   /** The funding of the row's default; null when the row inherits a default it cannot see. */
-  referenceFunding: 'platform' | 'partner_key' | null;
+  referenceFunding: AiOfferingDto['funding'] | null;
   crossFunding: boolean;
   onChange: (next: string[]) => void;
   disabled?: boolean;

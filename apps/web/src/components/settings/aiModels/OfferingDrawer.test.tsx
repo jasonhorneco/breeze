@@ -18,6 +18,19 @@ const body = () => JSON.parse(fetchWithAuth.mock.calls[0][1].body);
 beforeEach(() => { fetchWithAuth.mockReset(); showToast.mockReset(); });
 
 describe('OfferingDrawer', () => {
+  it('renders every offered subscription effort and preserves its exact saved value', () => {
+    const effort = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'] as const;
+    render(<OfferingDrawer offering={row({ funding: 'chatgpt_plan',
+      optionSupport: { effort: [...effort], thinkingDisplay: [], speed: [], inferenceGeo: [] },
+      defaultOptions: { effort: 'ultra' },
+    })} offerings={[]} onClose={vi.fn()} onSaved={vi.fn()} />);
+    for (const level of effort) expect(screen.getByTestId(`ai-offering-allowed-effort-${level}`)).toBeTruthy();
+    const select = screen.getByTestId('ai-offering-default-effort') as HTMLSelectElement;
+    expect([...select.options].map(o => o.value)).toEqual(['', ...effort]);
+    expect(select.value).toBe('ultra');
+    expect(fetchWithAuth).not.toHaveBeenCalled();
+  });
+
   it('sends only changed fields with expectedUpdatedAt', async () => {
     fetchWithAuth.mockResolvedValueOnce(jsonRes({ id: OFF, updatedAt: '2026-10-02T00:00:00.000Z' }));
     render(<OfferingDrawer offering={row({ id: OFF, updatedAt: '2026-10-01T00:00:00.000Z' })} offerings={[]} onClose={vi.fn()} onSaved={vi.fn()} />);
