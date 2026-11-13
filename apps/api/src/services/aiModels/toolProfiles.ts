@@ -178,7 +178,7 @@ export const CURATED_PROFILES: Readonly<Record<ProfiledSurface, Readonly<Record<
  */
 export type ProfilePrefixTokens = Readonly<Record<ProfiledSurface, Readonly<Record<'minimal' | 'standard' | 'full', number | null>>>>;
 export const PROFILE_PREFIX_TOKENS: ProfilePrefixTokens = Object.freeze({
-  chat: { minimal: 3186, standard: 11454, full: 120512 },
+  chat: { minimal: 3405, standard: 11673, full: 120512 },
   helper: { minimal: 2820, standard: 4631, full: 8593 },
   script_builder: { minimal: 3419, standard: 4238, full: 6372 },
   ai_agents: { minimal: 3026, standard: 10825, full: 77534 },
