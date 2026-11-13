@@ -2,7 +2,7 @@ import { assertBoundModel, registerGatewayAdapter, type GatewayAdapter } from '.
 import { joinByoUrl } from '../byoEndpointPolicy';
 import { noteGatewayFailure } from '../failureNotes';
 import { forwardUpstream } from '../forward';
-import { GatewayError, type GatewayGrantRecord, type GatewayResponse } from '../types';
+import { GatewayError, type GatewayResponse } from '../types';
 import { estimateInputTokens, openAiCompatibleAdapter } from './adapter';
 import { encodeSse } from './sse';
 import { translatePlanRequest } from './translatePlanRequest';
