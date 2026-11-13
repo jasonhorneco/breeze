@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { assertBoundModel, registerGatewayAdapter, type GatewayAdapter } from '../adapter';
 import { joinByoUrl } from '../byoEndpointPolicy';
 import { noteGatewayFailure } from '../failureNotes';
@@ -10,23 +9,9 @@ import { translatePlanRequest } from './translatePlanRequest';
 import { translatePlanResponse } from './translatePlanResponse';
 import type { AnthropicMessage } from './translateResponse';
 
-const attempts = new WeakMap<GatewayGrantRecord, Set<string>>();
 const json = (body: unknown): GatewayResponse => ({
   status: 200, headers: { 'content-type': 'application/json' }, body: Buffer.from(JSON.stringify(body)),
 });
-
-function recordAttempt(grant: GatewayGrantRecord, body: string): void {
-  const digest = createHash('sha256').update(body).digest('hex');
-  let seen = attempts.get(grant);
-  if (!seen) {
-    seen = new Set();
-    attempts.set(grant, seen);
-  }
-  if (seen.has(digest) || seen.size >= 32) {
-    throw new GatewayError(409, 'invalid_request_error', 'plan_request_repeated', 'The ChatGPT plan request was already attempted.');
-  }
-  seen.add(digest);
-}
 
 async function* messageEvents(message: AnthropicMessage) {
   yield encodeSse('message_start', {
@@ -72,7 +57,9 @@ export const chatGptPlanAdapter: GatewayAdapter = {
 
     const translated = translatePlanRequest(parsed, model, config.effort, config.catalogSearch);
     const body = JSON.stringify(translated.body);
-    recordAttempt(grant, body);
+    // Use the caller's normal SDK request/retry semantics, like other gateway
+    // adapters. Identical input is not evidence of a duplicate execution, and
+    // a worker refusal must not poison every subsequent attempt on this grant.
     const upstream = await forwardUpstream(grant, {
       url: joinByoUrl(config.baseUrl, 'responses'),
       method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
@@ -80,6 +67,11 @@ export const chatGptPlanAdapter: GatewayAdapter = {
     }, req.signal);
     if (!upstream.ok || !upstream.body || !/^text\/event-stream(?:\s*;|$)/i.test(upstream.headers.get('content-type') ?? '')) {
       await upstream.body?.cancel();
+      if (upstream.status === 409) {
+        const message = 'The ChatGPT plan worker is busy. Retry after the current request finishes.';
+        noteGatewayFailure(grant.aiSessionId, message);
+        throw new GatewayError(429, 'rate_limit_error', 'plan_worker_busy', message);
+      }
       const limited = upstream.status === 429;
       const message = limited ? 'The ChatGPT plan limit stopped this request.' : 'The ChatGPT plan worker could not serve this request.';
       noteGatewayFailure(grant.aiSessionId, message);
