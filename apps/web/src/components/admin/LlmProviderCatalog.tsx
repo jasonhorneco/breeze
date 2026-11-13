@@ -452,7 +452,7 @@ export default function LlmProviderCatalog() {
                 value={entrySlug}
                 onChange={(e) => setEntrySlug(e.target.value)}
                 placeholder={t('admin.llmProviderCatalog.entryForm.placeholders.slug')}
-                className="w-full border rounded px-3 py-2 text-sm font-mono"
+                className="w-full border rounded px-3 py-2 text-sm font-mono bg-background text-foreground dark:[color-scheme:dark]"
               />
             </div>
             <div>
@@ -463,7 +463,7 @@ export default function LlmProviderCatalog() {
                 value={entryName}
                 onChange={(e) => setEntryName(e.target.value)}
                 placeholder={t('admin.llmProviderCatalog.entryForm.placeholders.name')}
-                className="w-full border rounded px-3 py-2 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
               />
             </div>
           </div>
@@ -475,7 +475,7 @@ export default function LlmProviderCatalog() {
               onChange={(e) => setEntryNotes(e.target.value)}
               placeholder={t('admin.llmProviderCatalog.entryForm.placeholders.notes')}
               rows={2}
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -709,7 +709,7 @@ export default function LlmProviderCatalog() {
                     value={revisionBaseUrl}
                     onChange={(e) => setRevisionBaseUrl(e.target.value)}
                     placeholder={t('admin.llmProviderCatalog.revisionForm.placeholders.baseUrl')}
-                    className="w-full border rounded px-3 py-2 text-sm font-mono"
+                    className="w-full border rounded px-3 py-2 text-sm font-mono bg-background text-foreground dark:[color-scheme:dark]"
                   />
                 </div>
                 <div>
@@ -718,7 +718,7 @@ export default function LlmProviderCatalog() {
                     data-testid="llm-catalog-revision-authmode"
                     value={revisionAuthMode}
                     onChange={(e) => setRevisionAuthMode(e.target.value as AuthMode)}
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
                   >
                     <option value="x-api-key">{t('admin.llmProviderCatalog.authModeOptions.x-api-key')}</option>
                     <option value="bearer">{t('admin.llmProviderCatalog.authModeOptions.bearer')}</option>
@@ -749,7 +749,7 @@ export default function LlmProviderCatalog() {
                                 value={row.providerModel}
                                 onChange={(e) => updateModelMapRow(modelId, { providerModel: e.target.value })}
                                 placeholder={t('admin.llmProviderCatalog.revisionForm.modelMap.providerModel')}
-                                className="col-span-2 border rounded px-2 py-1 text-xs font-mono"
+                                className="col-span-2 border rounded px-2 py-1 text-xs font-mono bg-background text-foreground dark:[color-scheme:dark]"
                               />
                               <input
                                 data-testid={`llm-catalog-modelmap-${modelId}-input`}
@@ -758,7 +758,7 @@ export default function LlmProviderCatalog() {
                                 value={row.inputCentsPerM}
                                 onChange={(e) => updateModelMapRow(modelId, { inputCentsPerM: e.target.value })}
                                 placeholder={t('admin.llmProviderCatalog.revisionForm.modelMap.inputPrice')}
-                                className="border rounded px-2 py-1 text-xs"
+                                className="border rounded px-2 py-1 text-xs bg-background text-foreground dark:[color-scheme:dark]"
                               />
                               <input
                                 data-testid={`llm-catalog-modelmap-${modelId}-output`}
@@ -767,7 +767,7 @@ export default function LlmProviderCatalog() {
                                 value={row.outputCentsPerM}
                                 onChange={(e) => updateModelMapRow(modelId, { outputCentsPerM: e.target.value })}
                                 placeholder={t('admin.llmProviderCatalog.revisionForm.modelMap.outputPrice')}
-                                className="border rounded px-2 py-1 text-xs"
+                                className="border rounded px-2 py-1 text-xs bg-background text-foreground dark:[color-scheme:dark]"
                               />
                               <input
                                 data-testid={`llm-catalog-modelmap-${modelId}-cacheread`}
@@ -776,7 +776,7 @@ export default function LlmProviderCatalog() {
                                 value={row.cacheReadCentsPerM}
                                 onChange={(e) => updateModelMapRow(modelId, { cacheReadCentsPerM: e.target.value })}
                                 placeholder={t('admin.llmProviderCatalog.revisionForm.modelMap.cacheReadPrice')}
-                                className="border rounded px-2 py-1 text-xs"
+                                className="border rounded px-2 py-1 text-xs bg-background text-foreground dark:[color-scheme:dark]"
                               />
                               <input
                                 data-testid={`llm-catalog-modelmap-${modelId}-cachewrite`}
@@ -785,7 +785,7 @@ export default function LlmProviderCatalog() {
                                 value={row.cacheWriteCentsPerM}
                                 onChange={(e) => updateModelMapRow(modelId, { cacheWriteCentsPerM: e.target.value })}
                                 placeholder={t('admin.llmProviderCatalog.revisionForm.modelMap.cacheWritePrice')}
-                                className="border rounded px-2 py-1 text-xs"
+                                className="border rounded px-2 py-1 text-xs bg-background text-foreground dark:[color-scheme:dark]"
                               />
                             </div>
                           )}
@@ -802,7 +802,7 @@ export default function LlmProviderCatalog() {
                     onChange={(e) => setRevisionDataNote(e.target.value)}
                     placeholder={t('admin.llmProviderCatalog.revisionForm.placeholders.dataNote')}
                     rows={2}
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -850,7 +850,7 @@ export default function LlmProviderCatalog() {
                   value={verifyApiKey}
                   onChange={(e) => setVerifyApiKey(e.target.value)}
                   placeholder={t('admin.llmProviderCatalog.verifyForm.apiKeyPlaceholder')}
-                  className="w-full border rounded px-3 py-2 text-sm font-mono"
+                  className="w-full border rounded px-3 py-2 text-sm font-mono bg-background text-foreground dark:[color-scheme:dark]"
                   autoComplete="off"
                 />
               </div>

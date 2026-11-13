@@ -253,7 +253,7 @@ export default function AiKillSwitch() {
                   onChange={(e) => setReason(e.target.value)}
                   placeholder={t('admin.aiKillSwitch.confirm.reasonPlaceholder')}
                   rows={3}
-                  className="w-full border rounded px-3 py-2 text-sm"
+                  className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
                   autoFocus
                 />
               </div>

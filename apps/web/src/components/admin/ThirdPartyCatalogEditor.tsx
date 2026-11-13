@@ -106,7 +106,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
               value={packageId}
               onChange={(e) => setPackageId(e.target.value)}
               placeholder={t('admin.thirdPartyCatalogEditor.placeholders.packageId')}
-              className="w-full border rounded px-3 py-2 text-sm font-mono"
+              className="w-full border rounded px-3 py-2 text-sm font-mono bg-background text-foreground dark:[color-scheme:dark]"
               disabled={editing}
             />
             {editing && (
@@ -123,7 +123,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
                 value={vendor}
                 onChange={(e) => setVendor(e.target.value)}
                 placeholder={t('admin.thirdPartyCatalogEditor.placeholders.vendor')}
-                className="w-full border rounded px-3 py-2 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
               />
             </div>
             <div>
@@ -134,7 +134,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
                 value={friendlyName}
                 onChange={(e) => setFriendlyName(e.target.value)}
                 placeholder={t('admin.thirdPartyCatalogEditor.placeholders.friendlyName')}
-                className="w-full border rounded px-3 py-2 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
               />
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
                 data-testid="catalog-editor-severity"
                 value={defaultSeverity}
                 onChange={(e) => setDefaultSeverity(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
               >
                 {severities.map((s) => (
                   <option key={s} value={s}>
@@ -182,7 +182,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
               value={homepageUrl}
               onChange={(e) => setHomepageUrl(e.target.value)}
               placeholder={t('admin.thirdPartyCatalogEditor.placeholders.homepageUrl')}
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function ThirdPartyCatalogEditor({ initial, onClose, onSaved }: P
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border rounded px-3 py-2 text-sm bg-background text-foreground dark:[color-scheme:dark]"
             />
           </div>
         </div>

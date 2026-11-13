@@ -419,7 +419,7 @@ export default function AiModels() {
                       step="any"
                       value={draft.rates[key]}
                       onChange={(e) => updateDraft({ rates: { ...draft.rates, [key]: e.target.value } })}
-                      className="w-full rounded border px-2 py-1"
+                      className="w-full rounded border px-2 py-1 bg-background text-foreground dark:[color-scheme:dark]"
                     />
                     {editing.rates && (
                       <span className="block text-xs text-muted-foreground" data-testid={`ai-models-rate-${key}-stored`}>
@@ -445,7 +445,7 @@ export default function AiModels() {
                       step="any"
                       value={draft.fastRates[key]}
                       onChange={(e) => updateDraft({ fastRates: { ...draft.fastRates, [key]: e.target.value } })}
-                      className="w-full rounded border px-2 py-1"
+                      className="w-full rounded border px-2 py-1 bg-background text-foreground dark:[color-scheme:dark]"
                     />
                     {editing.optionRates?.['speed:fast'] && (
                       <span className="block text-xs text-muted-foreground" data-testid={`ai-models-fast-rate-${key}-stored`}>
@@ -507,7 +507,7 @@ export default function AiModels() {
                 type="text"
                 value={draft.inferenceGeo}
                 onChange={(e) => updateDraft({ inferenceGeo: e.target.value })}
-                className="w-full rounded border px-2 py-1"
+                className="w-full rounded border px-2 py-1 bg-background text-foreground dark:[color-scheme:dark]"
               />
               <span className="block text-xs text-muted-foreground">{t('admin.aiModels.drawer.inferenceGeoHint')}</span>
             </label>
@@ -515,7 +515,7 @@ export default function AiModels() {
             <div className="grid grid-cols-2 gap-3">
               <label className="space-y-1">
                 <span className="font-medium">{t('admin.aiModels.drawer.minPlan')}</span>
-                <select data-testid="ai-models-min-plan" value={draft.minPlan} onChange={(e) => updateDraft({ minPlan: e.target.value })} className="w-full rounded border px-2 py-1">
+                <select data-testid="ai-models-min-plan" value={draft.minPlan} onChange={(e) => updateDraft({ minPlan: e.target.value })} className="w-full rounded border px-2 py-1 bg-background text-foreground dark:[color-scheme:dark]">
                   <option value="">{t('admin.aiModels.drawer.allPlans')}</option>
                   {planOptions.map((plan) => <option key={plan} value={plan}>{plan}</option>)}
                 </select>
@@ -526,7 +526,7 @@ export default function AiModels() {
                   data-testid="ai-models-prompt-profile"
                   value={draft.promptProfile}
                   onChange={(e) => updateDraft({ promptProfile: e.target.value as PromptProfile })}
-                  className="w-full rounded border px-2 py-1"
+                  className="w-full rounded border px-2 py-1 bg-background text-foreground dark:[color-scheme:dark]"
                 >
                   {PROMPT_PROFILES.map((profile) => (
                     <option key={profile} value={profile}>{t(/* i18n-dynamic */ `admin.aiModels.promptProfile.${profile}`)}</option>
