@@ -2,7 +2,8 @@ import { assertBoundModel, registerGatewayAdapter, type GatewayAdapter } from '.
 import { joinByoUrl } from '../byoEndpointPolicy';
 import { noteGatewayFailure } from '../failureNotes';
 import { forwardUpstream } from '../forward';
-import { GatewayError, type GatewayResponse } from '../types';
+import { GatewayError, gatewayErrorBody, type GatewayResponse } from '../types';
+import { contextWindowExceededMessage, planRequest } from './contextWindow';
 import { estimateInputTokens, openAiCompatibleAdapter } from './adapter';
 import { encodeSse } from './sse';
 import { translatePlanRequest } from './translatePlanRequest';
@@ -52,10 +53,23 @@ export const chatGptPlanAdapter: GatewayAdapter = {
       throw new GatewayError(400, 'invalid_request_error', 'bad_json', 'Request body is not JSON.');
     }
     const model = assertBoundModel(grant, parsed?.model);
-    const estimatedInputTokens = estimateInputTokens(parsed);
-    if (req.path === '/v1/messages/count_tokens') return json({ input_tokens: estimatedInputTokens });
+    if (req.path === '/v1/messages/count_tokens') return json({ input_tokens: estimateInputTokens(parsed) });
 
     const translated = translatePlanRequest(parsed, model, config.effort, config.catalogSearch, { compactSchemas: grant.compactSchemas });
+    const estimatedInputTokens = estimateInputTokens(grant.compactSchemas ? translated.body : parsed);
+    const known = grant.knownWindows.get(model);
+    if (known) {
+      const plan = planRequest({ connectionId: config.connectionId, configVersion: config.configVersion, model },
+        parsed.max_tokens, estimatedInputTokens, known);
+      if (plan.kind === 'too_large') {
+        const message = contextWindowExceededMessage(plan.contextWindow, plan.promptTokens);
+        noteGatewayFailure(grant.aiSessionId, message, 'context_window_exceeded');
+        return { status: 400, headers: { 'content-type': 'application/json' },
+          body: Buffer.from(gatewayErrorBody('invalid_request_error', message)) };
+      }
+      // The subscription endpoint owns its output budget; do not introduce
+      // unsupported output parameters when applying the shared input check.
+    }
     const body = JSON.stringify(translated.body);
     // Use the caller's normal SDK request/retry semantics, like other gateway
     // adapters. Identical input is not evidence of a duplicate execution, and

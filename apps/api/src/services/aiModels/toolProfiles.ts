@@ -169,18 +169,18 @@ export const CURATED_PROFILES: Readonly<Record<ProfiledSurface, Readonly<Record<
  *
  * `null` means "not measured": if ANY of a surface's three prefixes is null,
  * `pickAutoProfile` answers `full` for it (nothing is constrained on a
- * guess). Office is not measured yet. Measured 2026-11-11 on origin/main
- * 0616d40358 + W03.
+ * guess). Office is not measured yet. Measured 2026-11-13 on the maintained
+ * release registry, including immutable script proposal/review tools.
  *
- * Note for W02: chat `full` is ~128k tokens on a gateway (tool search is off
+ * Note for W02: chat `full` is ~121k tokens on a gateway (tool search is off
  * there, so every schema is inline), so a 131,072-token window resolves to
  * `standard`, not the plan's worked-example `full` (which assumed 68,000).
  */
 export type ProfilePrefixTokens = Readonly<Record<ProfiledSurface, Readonly<Record<'minimal' | 'standard' | 'full', number | null>>>>;
 export const PROFILE_PREFIX_TOKENS: ProfilePrefixTokens = Object.freeze({
-  chat: { minimal: 3289, standard: 11037, full: 128300 },
-  helper: { minimal: 2789, standard: 4600, full: 8562 },
+  chat: { minimal: 3186, standard: 11454, full: 120512 },
+  helper: { minimal: 2820, standard: 4631, full: 8593 },
   script_builder: { minimal: 3419, standard: 4238, full: 6372 },
-  ai_agents: { minimal: 2995, standard: 10292, full: 79071 },
+  ai_agents: { minimal: 3026, standard: 10825, full: 77534 },
   office_chat: { minimal: null, standard: null, full: null },
 });

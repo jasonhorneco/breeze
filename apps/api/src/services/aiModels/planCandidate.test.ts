@@ -32,6 +32,7 @@ describe('subscription candidate tool and window settings', () => {
       toolProfile: 'standard', toolAllowlist: null, effectiveWindow: 64000, transport: 'gateway',
     });
     expect(c.limits.maxInputTokens).toBe(64000);
+    expect(c.contextWindow).toEqual({ window: 64000, source: 'override' });
     expect(c.defaultOptions).toEqual({ effort: 'high' });
     expect(c.logicalModel).toBe('gpt-6.1-sol');
     expect(c.funding).toBe('chatgpt_plan');

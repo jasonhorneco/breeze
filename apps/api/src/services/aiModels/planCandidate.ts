@@ -5,7 +5,7 @@ import type { LoadedCandidate } from './candidateLoader';
 import type { PartnerAiConnection } from './connections';
 import type { GatewayConnectionConfig, GatewayCredential } from './gateway/types';
 import type { Offering } from './offerings';
-import { resolveEffectiveContextWindow } from './contextWindowFacts';
+import { knownContextWindow, resolveEffectiveContextWindow } from './contextWindowFacts';
 import { toolProfileFactsFrom } from './toolProfileFacts';
 
 const planOffering = z.object({
@@ -70,5 +70,6 @@ export function planCandidate(offering: Offering, conn: PartnerAiConnection): Lo
     promptProfile: 'generic',
     limits: { maxInputTokens: window.value, maxOutputTokens: null },
     configVersion: conn.configVersion,
+    contextWindow: knownContextWindow(window),
   };
 }

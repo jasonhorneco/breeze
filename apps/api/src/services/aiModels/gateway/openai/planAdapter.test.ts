@@ -25,7 +25,7 @@ function completed() {
   }), { headers: { 'content-type': 'text/event-stream' } });
 }
 
-function client(maxRetries = 0, compactSchemas = false) {
+function client(maxRetries = 0, compactSchemas = false, contextWindow: number | null = null) {
   const grant = gateway.grant({
     config: {
       source: 'gateway', kind: 'chatgpt_plan', partnerId: 'fixture-partner',
@@ -34,6 +34,7 @@ function client(maxRetries = 0, compactSchemas = false) {
     },
     credential: { secret: 'fixture-worker-credential' }, wireModels: [model],
     orgId: 'fixture-org', aiSessionId: 'fixture-session', purpose: 'dispatch', compactSchemas,
+    ...(contextWindow ? { knownWindows: new Map([[model, { window: contextWindow, source: 'override' as const }]]) } : {}),
   });
   return {
     grant,
@@ -56,6 +57,13 @@ afterEach(async () => {
 });
 
 describe('native ChatGPT plan gateway request semantics', () => {
+  it('honors a saved input window before subscription dispatch', async () => {
+    const { sdk } = client(0, false, 1024);
+    await expect(sdk.messages.create({ ...request, messages: [{ role: 'user', content: 'evidence '.repeat(2000) }] }))
+      .rejects.toMatchObject({ status: 400 });
+    expect(calls).toBe(0);
+    expect(takeGatewayFailureNote('fixture-session')).toMatchObject({ code: 'context_window_exceeded' });
+  });
   it('applies the grant schema profile to the actual subscription request', async () => {
     let sent: unknown;
     __setUpstreamFetchForTests((async (_url, init) => {
