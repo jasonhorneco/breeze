@@ -950,7 +950,7 @@ describe('executeAgentRun', () => {
     seedRows();
     const gateway = makeResolvedModel('openai_compatible', {
       surface: 'ai_agents',
-      toolProfileFacts: { toolProfile: 'minimal', toolAllowlist: null, effectiveWindow: null, transport: 'gateway' },
+      toolProfileFacts: { toolProfile: 'standard', toolAllowlist: null, effectiveWindow: null, transport: 'gateway' },
     });
     resolveModel.mockResolvedValue(gateway);
     await executeAgentRun(RUN_ID);
@@ -958,10 +958,10 @@ describe('executeAgentRun', () => {
       key: `agent-run:${RUN_ID}`, orgId: ORG_ID, aiSessionId: 'session-1', compactSchemas: true,
     });
     // The server advertises under the same exposure (compact descriptions; no session to read it from).
-    expect(createBreezeMcpServer.mock.calls[0]?.[5]).toMatchObject({ toolExposure: { profile: 'minimal', promptMode: 'constrained' } });
+    expect(createBreezeMcpServer.mock.calls[0]?.[5]).toMatchObject({ toolExposure: { profile: 'standard', promptMode: 'constrained' } });
     // And the ledger records it.
     expect(settleInvocation).toHaveBeenCalledWith(expect.objectContaining({
-      agentRunId: RUN_ID, toolExposure: { profile: 'minimal', fingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) },
+      agentRunId: RUN_ID, toolExposure: { profile: 'standard', fingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) },
     }));
   });
 

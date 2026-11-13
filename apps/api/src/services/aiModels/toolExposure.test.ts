@@ -223,7 +223,7 @@ describe('pickAutoProfile', () => {
     expect(pickAutoProfile(8192, 'office_chat')).toBe('full');
   });
 
-  it('#11395: the measured chat pins: 8k → minimal, 32k → standard, 131k → standard (full is ~128k on a gateway), 4k → too_small', () => {
+  it('#11395: the measured chat pins: 8k → minimal, 32k → standard, 131k → standard (full is ~121k on a gateway), 4k → too_small', () => {
     expect(pickAutoProfile(8192, 'chat')).toBe('minimal');
     expect(pickAutoProfile(32768, 'chat')).toBe('standard');
     expect(pickAutoProfile(131072, 'chat')).toBe('standard');
@@ -238,10 +238,10 @@ describe('pickAutoProfile', () => {
    * worked-example table (W02) is this table. A re-measured pin moves a threshold and must update it here.
    */
   it.each([
-    ['chat', 7_647, 16_728, 171_067],
-    ['helper', 7_147, 10_291, 16_920],
+    ['chat', 7_544, 17_145, 160_683],
+    ['helper', 7_178, 10_322, 16_951],
     ['script_builder', 7_777, 9_929, 14_730],
-    ['ai_agents', 7_353, 15_983, 105_428],
+    ['ai_agents', 7_384, 16_516, 103_379],
   ] as const)('%s: minimal from %i, standard from %i, full from %i (measured pins)', (surface, minimal, standard, full) => {
     expect(pickAutoProfile(minimal - 1, surface)).toBe('too_small');
     expect(pickAutoProfile(minimal, surface)).toBe('minimal');
