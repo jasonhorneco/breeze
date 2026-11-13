@@ -2240,7 +2240,8 @@ describe('executeAgentRun', () => {
     expect(lastQueryOptions?.allowedTools).toEqual(
       expect.arrayContaining(expectedExposure.map((name) => `mcp__breeze__${name}`)),
     );
-    expect(lastQueryOptions?.allowedTools).toHaveLength(expectedExposure.length);
+    expect(lastQueryOptions?.allowedTools).toContain('mcp__breeze__request_human_review');
+    expect(lastQueryOptions?.allowedTools).toHaveLength(expectedExposure.length + 1);
     expect(createBreezeMcpServer.mock.calls[0]?.[5]).toEqual({ onlyTools: new Set(expectedExposure) });
   });
 
@@ -3683,10 +3684,11 @@ describe('verdict profile in the run loop (P2-1)', () => {
     expect(lastQueryOptions?.allowedTools).toEqual(
       expect.arrayContaining(expectedExposure.map((name) => `mcp__breeze__${name}`)),
     );
-    expect(lastQueryOptions?.allowedTools).toHaveLength(expectedExposure.length);
+    expect(lastQueryOptions?.allowedTools).toContain('mcp__breeze__request_human_review');
+    expect(lastQueryOptions?.allowedTools).toHaveLength(expectedExposure.length + 1);
     expect(lastQueryOptions?.allowedTools).not.toEqual(BREEZE_MCP_TOOL_NAMES);
     const extraTools = createBreezeMcpServer.mock.calls[0]?.[4] as unknown[] | undefined;
-    expect(extraTools ?? []).toEqual([]);
+    expect((extraTools as Array<{name:string}>).map((tool) => tool.name)).toEqual(['request_human_review']);
 
     // A full run now DOES pass onlyTools — the exposure floor above, not
     // undefined/the whole registry.
@@ -3705,7 +3707,8 @@ describe('verdict profile in the run loop (P2-1)', () => {
     expect(lastQueryOptions?.allowedTools).toEqual(
       expect.arrayContaining(expectedExposure.map((name) => `mcp__breeze__${name}`)),
     );
-    expect(lastQueryOptions?.allowedTools).toHaveLength(expectedExposure.length);
+    expect(lastQueryOptions?.allowedTools).toContain('mcp__breeze__request_human_review');
+    expect(lastQueryOptions?.allowedTools).toHaveLength(expectedExposure.length + 1);
   });
 
   // #7427: `fullRunToolExposure` walks the `aiTools` registry, which carries
@@ -3738,7 +3741,8 @@ describe('verdict profile in the run loop (P2-1)', () => {
     expect(lastQueryOptions?.allowedTools).toEqual(
       expect.arrayContaining(expected.map((name) => `mcp__breeze__${name}`)),
     );
-    expect(lastQueryOptions?.allowedTools).toHaveLength(expected.length);
+    expect(lastQueryOptions?.allowedTools).toContain('mcp__breeze__request_human_review');
+    expect(lastQueryOptions?.allowedTools).toHaveLength(expected.length + 1);
     for (const name of undeclared) {
       expect(lastQueryOptions?.allowedTools).not.toContain(`mcp__breeze__${name}`);
     }
@@ -3748,6 +3752,18 @@ describe('verdict profile in the run loop (P2-1)', () => {
   // verdict but then hit `error_max_turns` before any further assistant text
   // must NOT be marked a ceiling failure — `outcome.alertVerdict` alone is
   // "produced something", same as an executed action or a proposal.
+  it('a recorded human-review handoff survives a subsequent turn ceiling without inventing an action', async () => {
+    seedRows({ effective: policy({ toolAllowlist: [] }) });
+    scriptQuery({ toolCalls: [{ tool: 'request_human_review', input: { reason: 'Need technician review.', nextSteps: [] } }],
+      results: [resultMessage({ subtype: 'error_max_turns', is_error: true })] });
+    await executeAgentRun(RUN_ID);
+    expect(finalTransition()!.to).toBe('completed');
+    const outcome = finalTransition()!.patch.outcome as AgentRunOutcome;
+    expect(outcome.humanReviewRequests).toHaveLength(1);
+    expect(outcome.executedActions).toEqual([]);
+    expect(outcome.proposedActions).toEqual([]);
+  });
+
   it('a verdict run that submitted its verdict then hit max_turns finishes normally, not failed', async () => {
     seedRows({ effective: policy({ toolAllowlist: [] }), profile: 'verdict' });
     scriptQuery({

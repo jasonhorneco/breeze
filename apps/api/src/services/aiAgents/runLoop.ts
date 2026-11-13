@@ -2238,7 +2238,8 @@ export function resolveRunToolExposure(
     : undefined;
 
   return {
-    exposedNames: [...new Set([...exposedNames, ...outcomeToolsForRun(run).map((name) => OUTCOME_MCP_TOOL_NAMES[name])])],
+    exposedNames: [...exposedNames, ...outcomeToolsForRun(run).map((name) => OUTCOME_MCP_TOOL_NAMES[name])
+      .filter((name) => !exposedNames.includes(name))],
     onlyTools,
   };
 }
@@ -3449,6 +3450,7 @@ export async function executeAgentRun(runId: string): Promise<void> {
     const producedSomething =
       outcome.executedActions.length > 0
       || outcome.proposedActions.length > 0
+      || (outcome.humanReviewRequests?.length ?? 0) > 0
       || outcome.alertVerdict !== undefined
       // Same rule for a sweep run's ONE job (wave P2-2, task 6): a run that
       // called `submit_sweep_findings` and only then hit `error_max_turns`
