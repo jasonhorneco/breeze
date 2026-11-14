@@ -12,6 +12,7 @@ vi.mock('./AiChatMessages', () => ({ default: () => null }));
 vi.mock('./AiChatInput', () => ({ default: () => null }));
 vi.mock('./AiContextBadge', () => ({ default: () => null }));
 vi.mock('./AiCostIndicator', () => ({ default: () => null }));
+vi.mock('./AiModelPicker', () => ({ default: () => null, ModelPickerControl: () => null }));
 
 import AiChatSidebar from './AiChatSidebar';
 import { useAiStore } from '@/stores/aiStore';

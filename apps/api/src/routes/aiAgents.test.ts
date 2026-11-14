@@ -16,6 +16,7 @@ import {
   AI_AGENT_LIMIT_DEFAULTS,
   AI_AGENT_RUN_LEAK_TRIPWIRE_KEYS,
   AI_AGENT_RUN_SUMMARY_EXCERPT_MAX_CHARS,
+  humanReviewRequestSchema,
   DEFAULT_IMPACT_WEIGHTS,
   type AgentToolCatalogDto,
   type AiAgentImpactDto,
@@ -1206,6 +1207,7 @@ const runDetailResponseSchema = z.object({
     // for a verdict run that hasn't produced one. `suggestedAction`'s
     // `disposition`/`reason` (review round 1, IMPORTANT 2) are the Tier-2
     // intent attempt's outcome, never the raw tool args/error message.
+    humanReviewRequests: z.array(humanReviewRequestSchema).max(1),
     alertVerdict: z.object({
       classification: z.string(),
       confidence: z.number(),

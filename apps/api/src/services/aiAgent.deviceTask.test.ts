@@ -97,7 +97,7 @@ describe('createSession device binding', () => {
 
     expect(vi.mocked(readOrgPartnerId)).toHaveBeenCalledWith('org-111');
     expect(vi.mocked(chooseSessionModel)).toHaveBeenCalledWith({
-      partnerId: 'partner-1', orgId: 'org-111', userId: auth.user.id, surface: 'chat',
+      partnerId: 'partner-1', orgId: 'org-111', userId: auth.user.id, surface: 'chat', planUserSession: false,
     });
     expect(valuesSpy).toHaveBeenCalledWith(expect.objectContaining({
       model: 'claude-sonnet-4-6', offeringId: 'off-1', offeringPartnerId: 'partner-1', billingSource: 'platform',
