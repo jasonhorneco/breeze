@@ -79,6 +79,10 @@
       "triage": {
         "categoryLabel": "Kategorie",
         "categoryUnresolved": "Vorgeschlagen — Name in dieser Ansicht nicht verfügbar"
+      },
+      "humanReview": {
+        "title": "Manuelle Prüfung erforderlich",
+        "hint": "Prüfen Sie unten die Nachweise und vorgeschlagenen Prüfungen. Diese Übergabe berechtigt nicht zur Ausführung einer Aktion."
       }
     },
     "headerLinks": {

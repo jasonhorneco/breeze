@@ -2453,7 +2453,8 @@
           "invalidTimeRange": "L’heure de début doit être avant la fin de l’heure.",
           "searchFailed": "Impossible de rechercher dans les journaux",
           "saveFailed": "Impossible d’enregistrer la requête",
-          "noRowsExport": "Pas de lignes à exporter."
+          "noRowsExport": "Pas de lignes à exporter.",
+          "savedQueriesFailed": "Impossible de charger les requêtes enregistrées."
         },
         "savePrompt": "Nomme cette requête enregistrée :",
         "title": "Journaux d’événements",
@@ -2485,7 +2486,12 @@
         "unknownSite": "Site inconnu",
         "empty": "Aucun journal ne correspondait aux filtres actuels.",
         "pageCount": "Page {{page}} de {{totalPages}}",
-        "previous": "Précédent"
+        "previous": "Précédent",
+        "savedQueries": "Requêtes enregistrées",
+        "customSearch": "Recherche personnalisée",
+        "usingSavedFilters": "Cette recherche utilise les filtres enregistrés.",
+        "resultsCountWithoutTotal": "{{shown}} affichés",
+        "currentPage": "Page {{page}}"
       }
     },
     "oauth": {

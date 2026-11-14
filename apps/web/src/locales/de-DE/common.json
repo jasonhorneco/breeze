@@ -2453,7 +2453,8 @@
           "invalidTimeRange": "Die Startzeit muss vor der Endzeit liegen.",
           "searchFailed": "Protokolle konnten nicht durchsucht werden",
           "saveFailed": "Abfrage konnte nicht gespeichert werden",
-          "noRowsExport": "Keine Zeilen zum Exportieren."
+          "noRowsExport": "Keine Zeilen zum Exportieren.",
+          "savedQueriesFailed": "Gespeicherte Abfragen konnten nicht geladen werden."
         },
         "savePrompt": "Benennen Sie diese gespeicherte Abfrage:",
         "title": "Ereignisprotokolle",
@@ -2485,7 +2486,12 @@
         "unknownSite": "Unbekannte Seite",
         "empty": "Keine Protokolle stimmten mit den aktuellen Filtern überein.",
         "pageCount": "Seite {{page}} von {{totalPages}}",
-        "previous": "Zurück"
+        "previous": "Zurück",
+        "savedQueries": "Gespeicherte Abfragen",
+        "customSearch": "Benutzerdefinierte Suche",
+        "usingSavedFilters": "Diese Suche verwendet die gespeicherten Filter.",
+        "resultsCountWithoutTotal": "{{shown}} angezeigt",
+        "currentPage": "Seite {{page}}"
       }
     },
     "oauth": {

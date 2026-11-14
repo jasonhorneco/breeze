@@ -79,6 +79,10 @@
       "triage": {
         "categoryLabel": "Categoria",
         "categoryUnresolved": "Sugerida — nome não disponível nesta visualização"
+      },
+      "humanReview": {
+        "title": "Revisão humana necessária",
+        "hint": "Revise as evidências e as verificações sugeridas abaixo. Este encaminhamento não autoriza uma ação."
       }
     },
     "headerLinks": {
