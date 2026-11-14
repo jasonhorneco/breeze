@@ -68,6 +68,7 @@ describe('resolveSessionTurn', () => {
     await resolveSessionTurn({ sessionId: 's1', surface: 'chat', userId: 'u1' });
     expect(m.resolveModel).toHaveBeenCalledWith({
       partnerId: 'partner-1', orgId: 'org-1', userId: 'u1', surface: 'chat',
+      planUserSession: undefined, planConfigured: undefined, subscriptionOnly: false,
       requested: { offeringId: 'off-9', options: { effort: 'high' }, origin: 'session' },
     });
   });
@@ -77,6 +78,7 @@ describe('resolveSessionTurn', () => {
     await resolveSessionTurn({ sessionId: 's1', surface: 'helper', userId: null });
     expect(m.resolveModel).toHaveBeenCalledWith({
       partnerId: 'partner-1', orgId: 'org-1', userId: null, surface: 'helper',
+      planUserSession: undefined, planConfigured: undefined, subscriptionOnly: false,
     });
   });
 

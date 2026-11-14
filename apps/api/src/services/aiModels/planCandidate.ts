@@ -18,7 +18,8 @@ export function planWorker(conn: PartnerAiConnection): {
   config: GatewayConnectionConfig;
   credential: GatewayCredential;
 } | null {
-  const { BREEZE_CODEX_PLAN_WORKER_URL: worker, BREEZE_CODEX_PLAN_WORKER_KEY_FILE: keyPath } = process.env;
+  const worker = process.env.BREEZE_CODEX_PLAN_WORKER_URL;
+  const keyPath = process.env.BREEZE_CODEX_PLAN_WORKER_KEY_FILE;
   if (!worker || !keyPath || conn.id !== process.env.BREEZE_CODEX_PLAN_CONNECTION_ID) return null;
   try {
     const url = new URL(worker);

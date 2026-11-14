@@ -2453,7 +2453,8 @@
           "invalidTimeRange": "A hora inicial deve ser anterior à hora final.",
           "searchFailed": "Falha ao pesquisar logs",
           "saveFailed": "Falha ao salvar consulta",
-          "noRowsExport": "Não há linhas para exportar."
+          "noRowsExport": "Não há linhas para exportar.",
+          "savedQueriesFailed": "Não foi possível carregar as consultas salvas."
         },
         "savePrompt": "Nome desta consulta salva:",
         "title": "Logs de Eventos",
@@ -2485,7 +2486,12 @@
         "unknownSite": "Local desconhecido",
         "empty": "Nenhum log correspondeu aos filtros atuais.",
         "pageCount": "Página {{page}} de {{totalPages}}",
-        "previous": "Anterior"
+        "previous": "Anterior",
+        "savedQueries": "Consultas salvas",
+        "customSearch": "Pesquisa personalizada",
+        "usingSavedFilters": "Esta pesquisa usa os filtros salvos.",
+        "resultsCountWithoutTotal": "{{shown}} exibidos",
+        "currentPage": "Página {{page}}"
       }
     },
     "oauth": {

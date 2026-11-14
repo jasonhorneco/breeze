@@ -68,6 +68,8 @@ vi.mock('../../services/sentry', () => ({ captureException: vi.fn() }));
 vi.mock('../../db', () => ({ db: {}, runOutsideDbContext: vi.fn(), withSystemDbAccessContext: vi.fn() }));
 
 vi.mock('../../services/aiModels/registryCutover', () => ({ ensurePartnerCutover: vi.fn() }));
+// This suite exercises org defaults and usage, not the legacy owner-only review catalog.
+vi.mock('../../services/aiModels/codexReviewCatalog', () => ({ codexReviewCatalog: vi.fn() }));
 vi.mock('../../services/aiModels/registryView', () => ({ buildPartnerModelsSnapshot: vi.fn(), buildOrgModelDefaults: vi.fn() }));
 vi.mock('../../services/aiModels/candidateLoader', () => ({ readOrgPartnerId: vi.fn() }));
 vi.mock('../../services/aiModels/connections', () => ({ getConnection: vi.fn() }));

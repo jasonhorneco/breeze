@@ -219,7 +219,7 @@ describe('GET /client-ai/sessions/:id/events', () => {
     const args = managerMock.getOrCreate.mock.calls[0]!;
     expect(args[9]).toEqual({ injectApprovalModeInstructions: false, ledgerUserId: null });
     // The reattach path resolves its own office_chat turn (no reservation, no dispatch).
-    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: SESSION_ID, surface: 'office_chat', userId: null });
+    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: SESSION_ID, surface: 'office_chat', userId: null, planConfigured: true });
     expect(args[6]).toBe(await resolveSessionTurnMock.mock.results[0]!.value);
     // SDK toolset is the write-mode-filtered client allowlist
     expect(args[7]).toEqual(expect.arrayContaining(['mcp__excel__read_range']));

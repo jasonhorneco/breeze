@@ -79,6 +79,10 @@
       "triage": {
         "categoryLabel": "Catégorie",
         "categoryUnresolved": "Suggéré — nom non disponible dans cette vue"
+      },
+      "humanReview": {
+        "title": "Examen humain nécessaire",
+        "hint": "Examinez les éléments de preuve et les vérifications suggérées ci-dessous. Ce transfert ne constitue pas une autorisation d’action."
       }
     },
     "headerLinks": {

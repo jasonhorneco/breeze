@@ -43,7 +43,7 @@ vi.mock('../components/ai/AiChatMessages', () => ({ default: () => null }));
 vi.mock('../components/ai/AiChatInput', () => ({ default: () => null }));
 vi.mock('../components/ai/AiContextBadge', () => ({ default: () => null }));
 vi.mock('../components/ai/AiCostIndicator', () => ({ default: () => null }));
-vi.mock('../components/ai/AiModelPicker', () => ({ default: () => null }));
+vi.mock('../components/ai/AiModelPicker', () => ({ default: () => null, ModelPickerControl: () => null }));
 vi.mock('../components/ai/AiContinuationPrompt', () => ({ default: () => null }));
 vi.mock('../components/ai/WispThreadHeader', () => ({ default: () => null }));
 vi.mock('../components/ai/WispThreadAttachments', () => ({ default: () => null }));

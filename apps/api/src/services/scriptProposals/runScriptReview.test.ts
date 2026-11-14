@@ -679,7 +679,7 @@ describe('runScriptReview — registry resolution (W03 Task 11)', () => {
     queueHappy();
     await runScriptReview(JOB);
     expect(shared.resolveModelMock).toHaveBeenCalledWith({
-      partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'script_reviewer', maxTokens: 2000,
+      partnerId: PARTNER_ID, orgId: ORG_ID, surface: 'script_reviewer', maxTokens: 2000, planConfigured: true,
     });
     // A system call: no userId, so no per-user permission gate.
     expect(shared.resolveModelMock.mock.calls[0]![0]).not.toHaveProperty('userId');

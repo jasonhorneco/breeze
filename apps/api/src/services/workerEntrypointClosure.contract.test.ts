@@ -354,6 +354,7 @@ const EXPECTED_NAMES = [
   // AI Suggested Fixes W1.
   'fixOutcomeWorker',
   'aiModelDiscoveryWorker',
+  'aiModelVerificationWorker',
   // Workload image currency W05 (#8194).
   'imageCurrencyWorker',
   // Trust Center W1 (#8768).
@@ -365,6 +366,12 @@ const EXPECTED_NAMES = [
 // ---------------------------------------------------------------------------
 
 describe('workerEntrypointClosure contract (#4086 Task 5)', () => {
+  it('shared run-profile configuration never loads orchestration or endpoint execution', () => {
+    const closure = importClosure(path.join(SRC_ROOT, 'services/aiAgents/runProfileConfig.ts'), { followDynamic: true });
+    expect(closure.size).toBeGreaterThan(1);
+    expect(socketLocalOrRouteOffenders(closure)).toEqual([]);
+    expect([...closure].map(relPath)).not.toContain('services/aiAgents/runLoop.ts');
+  });
   it('worker.ts exists (the worker entrypoint this contract is about)', () => {
     expect(fs.existsSync(WORKER_ENTRYPOINT)).toBe(true);
   });

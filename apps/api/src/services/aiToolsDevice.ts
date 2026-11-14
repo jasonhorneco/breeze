@@ -38,6 +38,8 @@ import { sqlTextArray } from '../db/sqlValues';
 import type { AuthContext } from '../middleware/auth';
 import type { AiTool } from './aiTools';
 import { verifyDeviceAccess } from './aiTools';
+import { customFieldDefinitionConditions, readCustomFieldDefinitions } from './customFieldDefinitionQueries';
+export { customFieldDefinitionConditions, readCustomFieldDefinitions } from './customFieldDefinitionQueries';
 import { requestDeviceGroupReevaluationAfterCommit } from '../jobs/deviceGroupJobs';
 import { resolveSiteAllowedDeviceIds, runFrozenDeviceIds, siteScopeCondition, deviceScopeCondition } from './aiToolsSiteScope';
 import { queryDeviceStats } from './deviceStats';
@@ -63,60 +65,6 @@ import {
 import { notParkedDeviceCondition } from './unassignedPool/selectorPredicate';
 
 type AiToolTier = 1 | 2 | 3 | 4;
-
-/**
- * Custom-field definitions are a DUAL-AXIS (org XOR partner) config table: a
- * partner-wide definition has `org_id IS NULL`, and an org-owned one has
- * `partner_id IS NULL`. An `eq(orgId, auth.orgId)` filter silently drops every
- * partner-wide field — which for an MSP is most of them. Exported so
- * `export_dataset`'s `custom_fields` adapter runs this exact predicate list
- * instead of a second, narrower one.
- */
-export function customFieldDefinitionConditions(auth: AuthContext): SQL[] {
-  const conditions: SQL[] = [];
-  if (auth.orgId) {
-    conditions.push(
-      sql`(${customFieldDefinitions.orgId} = ${auth.orgId} OR ${customFieldDefinitions.orgId} IS NULL)`
-    );
-    if (auth.partnerId) {
-      conditions.push(
-        sql`(${customFieldDefinitions.partnerId} = ${auth.partnerId} OR ${customFieldDefinitions.partnerId} IS NULL)`
-      );
-    }
-    return conditions;
-  }
-  if (auth.partnerId) {
-    // Partner-scope caller with no direct org: mirror
-    // routes/customFields.ts:238-249 (`partnerId = P OR orgId IN
-    // accessibleOrgIds`). `partnerId = P OR partnerId IS NULL` matches every
-    // org-owned definition system-wide, leaving RLS as the only gate.
-    const accessibleOrgIds = (auth.accessibleOrgIds ?? []).filter((id): id is string => Boolean(id));
-    conditions.push(
-      accessibleOrgIds.length > 0
-        ? sql`(${customFieldDefinitions.partnerId} = ${auth.partnerId} OR ${customFieldDefinitions.orgId} IN ${accessibleOrgIds})`
-        : eq(customFieldDefinitions.partnerId, auth.partnerId)
-    );
-  }
-  return conditions;
-}
-
-export async function readCustomFieldDefinitions(auth: AuthContext) {
-  const conditions = customFieldDefinitionConditions(auth);
-  return db
-    .select({
-      id: customFieldDefinitions.id,
-      name: customFieldDefinitions.name,
-      fieldKey: customFieldDefinitions.fieldKey,
-      type: customFieldDefinitions.type,
-      required: customFieldDefinitions.required,
-      options: customFieldDefinitions.options,
-      deviceTypes: customFieldDefinitions.deviceTypes,
-      defaultValue: customFieldDefinitions.defaultValue,
-    })
-    .from(customFieldDefinitions)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(customFieldDefinitions.name);
-}
 
 // #5351 — per-slot memory inventory for get_device_details. A 4-socket
 // server can report 48+ slots; the list is capped like disks/NICs, while the

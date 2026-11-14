@@ -200,7 +200,7 @@ describe('POST /client-ai/sessions (create) — host routing', () => {
     }));
     expect(readOrgPartnerIdMock).toHaveBeenCalledWith(ORG_ID);
     expect(chooseSessionModelMock).toHaveBeenCalledWith({
-      partnerId: 'partner-from-org', orgId: ORG_ID, userId: null, surface: 'office_chat',
+      partnerId: 'partner-from-org', orgId: ORG_ID, userId: null, surface: 'office_chat', planConfigured: true,
     });
     expect(checkBillingCreditsMock).toHaveBeenCalledWith(ORG_ID, 'partner_key');
     // The create audit records the resolved host.

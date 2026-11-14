@@ -139,6 +139,12 @@ vi.mock('./aiToolOutput', () => ({
 }));
 vi.mock('./clientIp', () => ({ getTrustedClientIpOrUndefined: () => undefined }));
 
+// Eviction exercises the real getOrCreate/cap/processor paths, not flow
+// catalog loading. The lazy resolver otherwise compiles the full validator/
+// tool graph on the first timed test. Its wiring has a dedicated flowTools
+// suite; an ordinary chat here has no flow tools. Keep normal timeout limits.
+vi.mock('./flows/flowTools', () => ({ resolveFlowTools: vi.fn(async () => []) }));
+
 import {
   StreamingSessionManager,
   SessionEventBus,

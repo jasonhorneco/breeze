@@ -962,7 +962,7 @@ describe('POST /tickets/draft', () => {
 
     expect(res.status).toBe(200);
     expect(hoisted.resolveModel).toHaveBeenCalledWith({
-      partnerId: PARTNER_ID, orgId: ORG_A, userId: USER_ID, surface: 'office_ticket', maxTokens: 1024,
+      partnerId: PARTNER_ID, orgId: ORG_A, userId: USER_ID, surface: 'office_ticket', maxTokens: 1024, planConfigured: true,
     });
     expect(hoisted.anthropicClientFor).toHaveBeenCalledWith(resolved, { surface: 'one_shot_email_draft', orgId: ORG_A });
     expect(hoisted.checkBudgetDetailed).toHaveBeenCalledWith(ORG_A, 'partner_key');
