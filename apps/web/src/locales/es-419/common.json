@@ -2453,7 +2453,8 @@
           "invalidTimeRange": "La hora de inicio debe ser anterior a la hora de finalización.",
           "searchFailed": "No se pudieron buscar registros",
           "saveFailed": "No se pudo guardar la consulta",
-          "noRowsExport": "No hay filas para exportar."
+          "noRowsExport": "No hay filas para exportar.",
+          "savedQueriesFailed": "No se pudieron cargar las consultas guardadas."
         },
         "savePrompt": "Nombre esta consulta guardada:",
         "title": "Registros de eventos",
@@ -2485,7 +2486,12 @@
         "unknownSite": "Sitio desconocido",
         "empty": "Ningún registro coincidió con los filtros actuales.",
         "pageCount": "Página {{page}} de {{totalPages}}",
-        "previous": "Anterior"
+        "previous": "Anterior",
+        "savedQueries": "Consultas guardadas",
+        "customSearch": "Búsqueda personalizada",
+        "usingSavedFilters": "Esta búsqueda utiliza los filtros guardados.",
+        "resultsCountWithoutTotal": "{{shown}} mostrados",
+        "currentPage": "Página {{page}}"
       }
     },
     "oauth": {

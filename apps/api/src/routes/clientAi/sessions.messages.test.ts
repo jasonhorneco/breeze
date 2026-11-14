@@ -257,7 +257,7 @@ describe('POST /client-ai/sessions/:id/messages', () => {
     const res = await postMessage({ content: 'hi' });
     expect(res.status).toBe(202);
 
-    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: SESSION_ID, surface: 'office_chat', userId: null });
+    expect(resolveSessionTurnMock).toHaveBeenCalledWith({ sessionId: SESSION_ID, surface: 'office_chat', userId: null, planConfigured: true });
     expect(checkBillingCreditsMock).toHaveBeenCalledWith(ORG_ID, 'partner_key');
     const call = managerMock.getOrCreate.mock.calls[0]!;
     expect(call[6]).toBe(model);

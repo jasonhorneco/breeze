@@ -250,8 +250,34 @@ describe('AI model registry contract', () => {
 
   it('rule 7 is not vacuous: the factory still builds its gateway client the checked way', () => {
     const factory = readFileSync(join(REPO, 'apps/api/src/services/aiModels/connectionFactory.ts'), 'utf8');
-    expect(factory).toMatch(/new Anthropic\(\{\s*baseURL: GATEWAY_CLIENT_BASE_URL,/);
-    expect(factory).toMatch(/createAnthropicClient\(\{\s*apiKey: GATEWAY_PLACEHOLDER_KEY,\s*target: \{\s*kind: 'gateway'/);
+    const sf = ts.createSourceFile('connectionFactory.ts', factory, ts.ScriptTarget.Latest, true);
+    let constructors = 0;
+    let gatewayCalls = 0;
+    const visit = (node: ts.Node) => {
+      if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'Anthropic') {
+        const arg = node.arguments?.[0];
+        if (arg && ts.isObjectLiteralExpression(arg) && isIdent(objectProp(arg, 'baseURL'), GATEWAY_BASE_URL_CONST)) {
+          constructors++;
+          expect(isIdent(objectProp(arg, 'apiKey'), GATEWAY_PLACEHOLDER)).toBe(true);
+          expect(isNullLiteral(objectProp(arg, 'authToken'))).toBe(true);
+        }
+      }
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'createAnthropicClient') {
+        const arg = node.arguments[0];
+        if (arg && ts.isObjectLiteralExpression(arg)) {
+          const target = objectProp(arg, 'target');
+          const kind = target && ts.isObjectLiteralExpression(target) ? objectProp(target, 'kind') : undefined;
+          if (kind && ts.isStringLiteral(kind) && kind.text === 'gateway') {
+            gatewayCalls++;
+            expect(isIdent(objectProp(arg, 'apiKey'), GATEWAY_PLACEHOLDER)).toBe(true);
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+    expect(constructors).toBeGreaterThan(0);
+    expect(gatewayCalls).toBeGreaterThan(0);
   });
 
   it('an exempt file passes only for its own rule', () => {

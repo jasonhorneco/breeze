@@ -2453,7 +2453,8 @@
           "invalidTimeRange": "L'ora di inizio deve essere precedente all'ora di fine.",
           "searchFailed": "Impossibile cercare nei log",
           "saveFailed": "Impossibile salvare la query",
-          "noRowsExport": "Nessuna riga da esportare."
+          "noRowsExport": "Nessuna riga da esportare.",
+          "savedQueriesFailed": "Impossibile caricare le query salvate."
         },
         "savePrompt": "Dai un nome a questa query salvata:",
         "title": "Registri eventi",
@@ -2485,7 +2486,12 @@
         "unknownSite": "Sito sconosciuto",
         "empty": "Nessun log corrispondeva ai filtri correnti.",
         "pageCount": "Pagina {{page}} di {{totalPages}}",
-        "previous": "Precedente"
+        "previous": "Precedente",
+        "savedQueries": "Query salvate",
+        "customSearch": "Ricerca personalizzata",
+        "usingSavedFilters": "Questa ricerca usa i filtri salvati.",
+        "resultsCountWithoutTotal": "{{shown}} visualizzati",
+        "currentPage": "Pagina {{page}}"
       }
     },
     "oauth": {

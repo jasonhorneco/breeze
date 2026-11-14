@@ -115,7 +115,7 @@ describe('createSession stores the registry choice (W03 Task 9)', () => {
     await expect(createSession(orgAuth(), { offeringId: OFFERING, options: { effort: 'high' } }))
       .resolves.toMatchObject({ id: 'sess-1' });
     expect(sm.chooseSessionModel).toHaveBeenCalledWith({
-      partnerId: 'partner-1', orgId: ORG_A, userId: 'user-2', surface: 'chat',
+      partnerId: 'partner-1', orgId: ORG_A, userId: 'user-2', surface: 'chat', planUserSession: false,
       offeringId: OFFERING, options: { effort: 'high' },
     });
     expect(insertedValues).toMatchObject({
@@ -129,7 +129,7 @@ describe('createSession stores the registry choice (W03 Task 9)', () => {
     armInsert();
     await createSession(orgAuth(), {});
     expect(sm.chooseSessionModel).toHaveBeenCalledWith({
-      partnerId: 'partner-1', orgId: ORG_A, userId: 'user-2', surface: 'chat',
+      partnerId: 'partner-1', orgId: ORG_A, userId: 'user-2', surface: 'chat', planUserSession: false,
     });
   });
 
@@ -175,7 +175,7 @@ describe('env OpenAI-compatible deployment (W06: one runtime)', () => {
     sm.chooseSessionModel.mockResolvedValue(envChoice);
     armInsert();
     await expect(createSession(orgAuth(), {})).resolves.toMatchObject({ id: 'sess-1' });
-    expect(sm.chooseSessionModel).toHaveBeenCalledWith({ partnerId: 'partner-1', orgId: ORG_A, userId: 'user-2', surface: 'chat' });
+    expect(sm.chooseSessionModel).toHaveBeenCalledWith({ partnerId: 'partner-1', orgId: ORG_A, userId: 'user-2', surface: 'chat', planUserSession: false });
     expect(insertedValues).toMatchObject({
       offeringId: OFFERING, offeringPartnerId: 'partner-1', model: 'qwen', billingSource: 'partner_key',
     });

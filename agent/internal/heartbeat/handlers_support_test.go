@@ -115,10 +115,12 @@ func TestHandleSupportEnd(t *testing.T) {
 			// The teardown is asynchronous so the result can flush first. Poll
 			// past supportEndFlushDelay either way: the refusal cases must
 			// still be given a real chance to (wrongly) fire before we
-			// conclude they didn't.
+			// conclude they didn't. Cleanup is only the first callback; wait
+			// for exit before restoring the seams so the teardown goroutine
+			// cannot race with test cleanup between those callbacks.
 			deadline := time.Now().Add(supportEndFlushDelay + 500*time.Millisecond)
 			for time.Now().Before(deadline) {
-				if cleanupCalls() > 0 {
+				if len(exitCalls()) > 0 {
 					break
 				}
 				time.Sleep(10 * time.Millisecond)

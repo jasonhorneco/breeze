@@ -1,6 +1,7 @@
 import { BREEZE_MCP_TOOL_NAMES, listChatSurfaceToolNames } from '../../aiAgentSdkTools';
 import { getHelperAllowedMcpToolNames, getHelperAllowedTools, type HelperPermissionLevel } from '../../helperToolFilter';
-import { resolveRunProfileLimits, resolveRunToolExposure } from '../../aiAgents/runLoop';
+import { resolveRunProfileLimits } from '../../aiAgents/runProfileConfig';
+import { resolveRunToolExposure } from '../../aiAgents/runLoop';
 import { outcomeToolsForRun, type OutcomeToolName } from '../../aiAgents/outcomeTools';
 import { SCRIPT_BUILDER_MCP_TOOL_NAMES } from '../../scriptBuilderTools';
 import { AI_AGENT_LIMIT_DEFAULTS, type AiAgentRunProfile } from '@breeze/shared';

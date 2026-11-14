@@ -79,6 +79,10 @@
       "triage": {
         "categoryLabel": "Kategori",
         "categoryUnresolved": "Önerildi — bu görünümde ad kullanılamıyor"
+      },
+      "humanReview": {
+        "title": "İnsan incelemesi gerekiyor",
+        "hint": "Aşağıdaki kanıtları ve önerilen kontrolleri inceleyin. Bu devir, işlem yapma yetkisi vermez."
       }
     },
     "headerLinks": {

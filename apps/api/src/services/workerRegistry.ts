@@ -2079,6 +2079,15 @@ export const WORKER_REGISTRY: readonly WorkerRegistration[] = [
       return { init: m.initializeAiModelDiscoveryWorker, shutdown: m.shutdownAiModelDiscoveryWorker };
     },
   },
+  // SDK model qualification is an execution workload; listing remains global.
+  {
+    name: 'aiModelVerificationWorker',
+    placement: 'socket-owner',
+    load: async () => {
+      const m = await import('../jobs/aiModelVerificationWorker');
+      return { init: m.initializeAiModelVerificationWorker, shutdown: m.shutdownAiModelVerificationWorker };
+    },
+  },
   // Workload image currency W05 (#8194): 30-minute registry pass. `global`:
   // its closure is db + services/imageCurrency (urlSafety), never routes or
   // socket-local dispatch (workerEntrypointClosure.contract.test.ts).

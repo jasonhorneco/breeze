@@ -313,6 +313,7 @@ export const MCP_COVERAGE: Readonly<Record<string, McpCoverageEntry>> = {
   'alertTemplates/rules.ts': { tools: ['manage_alert_rules'] },
   'alertTemplates/templates.ts': { tools: ['manage_alert_rules'] },
   'alerts/alerts.ts': { tools: ['manage_alerts'] },
+  'alerts/codexReview.ts': { exempt: 'human_only_ai_governance', note: 'Legacy owner-session review pilot and publication into native approvals; never a machine-call surface or a grant for the AI to approve its own work.' },
   'alerts/alertExternalTickets.ts': { tools: ['manage_alerts'] },
   'alerts/alertPsaTicket.ts': { exempt: 'vendor_console_admin', note: 'Manual alert -> PSA ticket admission (#10499 W2-C); a human decision to raise a ticket in the external PSA, like psaAlertTicketing.ts.' },
   'alerts/channels.ts': { tools: ['manage_notification_channels'] },

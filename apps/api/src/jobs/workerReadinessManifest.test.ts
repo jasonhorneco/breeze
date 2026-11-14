@@ -212,12 +212,14 @@ describe('role-scoped, rule-resolved declarations (spec section 5, D3/D3a)', () 
   it('api declares agentCommandRelay and no global consumer; worker declares eventDispatch(+maintenance) and no socket-owner consumer', () => {
     const api = declare('api', ALL_ON).declared;
     expect(api.get('agentCommandRelay')).toBe(true);
+    expect(api.get('aiModelVerificationWorker')).toBe(true);
     expect(api.has('offlineDetector')).toBe(false); // a global entry
     expect(api.has('eventDispatch')).toBe(false);
     const worker = declare('worker', ALL_ON).declared;
     expect(worker.get('eventDispatch')).toBe(true);
     expect(worker.get('eventDispatchMaintenance')).toBe(false); // optional marker, even with the flag on
     expect(worker.has('agentCommandRelay')).toBe(false);
+    expect(worker.has('aiModelVerificationWorker')).toBe(false);
     expect(worker.has('orgMerge')).toBe(false); // a socket-owner entry
   });
 

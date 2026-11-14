@@ -2453,7 +2453,8 @@
           "invalidTimeRange": "Başlangıç zamanı, bitiş zamanından önce olmalıdır.",
           "searchFailed": "Günlüklerde arama yapılamadı",
           "saveFailed": "Sorgu kaydedilemedi",
-          "noRowsExport": "Dışa aktarılacak satır yok."
+          "noRowsExport": "Dışa aktarılacak satır yok.",
+          "savedQueriesFailed": "Kaydedilen sorgular yüklenemedi."
         },
         "savePrompt": "Bu kaydedilen sorguya ad verin:",
         "title": "Olay Günlükleri",
@@ -2485,7 +2486,12 @@
         "unknownSite": "Bilinmeyen site",
         "empty": "Mevcut filtrelerle eşleşen günlük yok.",
         "pageCount": "Sayfa {{page}} / {{totalPages}}",
-        "previous": "Önceki"
+        "previous": "Önceki",
+        "savedQueries": "Kayıtlı sorgular",
+        "customSearch": "Özel arama",
+        "usingSavedFilters": "Bu arama kayıtlı filtreleri kullanır.",
+        "resultsCountWithoutTotal": "{{shown}} gösteriliyor",
+        "currentPage": "Sayfa {{page}}"
       }
     },
     "oauth": {

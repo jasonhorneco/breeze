@@ -812,7 +812,7 @@ test('ci.yml runs the release-ledger job for every code change and CI Success re
   assert.match(text, /node --test scripts\/release\/\*\.test\.mjs/u);
   assert.match(text, /server-only-ledger\.mjs validate --ref HEAD/u);
   assert.match(text, /check-server-only-ledger-change\.sh/u);
-  assert.match(text, /git merge-base HEAD origin\/main/u);
+  assert.match(text, /git merge-base HEAD "\$CI_COMPARISON_REF"/u);
   const summary = jobs.get('ci-success').lines.map((line) => line.content).join('\n');
   assert.match(summary, /needs: \[[^\]]*\brelease-ledger\b/u);
   assert.match(summary, /RELEASE_LEDGER_RESULT: \$\{\{ needs\.release-ledger\.result \}\}/u);

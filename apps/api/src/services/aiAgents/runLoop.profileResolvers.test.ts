@@ -3,6 +3,10 @@ import { AI_AGENT_LIMIT_DEFAULTS, type AiAgentLimits, type AiAgentRunProfile } f
 import {
   declaredFullRunToolExposure, resolveRunProfileLimits, resolveRunProfileToolAllowlist, resolveRunToolExposure,
 } from './runLoop';
+import {
+  resolveRunProfileLimits as metadataLimits,
+  resolveRunProfileToolAllowlist as metadataAllowlist,
+} from './runProfileConfig';
 import { isOutcomeTool, OUTCOME_MCP_TOOL_NAMES } from './outcomeTools';
 import { verdictLimits, verdictToolAllowlist } from './verdictProfile';
 import { sweepLimits, sweepToolAllowlist } from './sweepProfile';
@@ -34,6 +38,10 @@ const ARMS: ReadonlyArray<[
 const AGENT_ALLOWLIST = ['manage_services:restart', 'manage_alerts:acknowledge', 'disk_cleanup'];
 
 describe('runLoop profile resolvers', () => {
+  it('production and metadata-only consumers share the same profile resolvers', () => {
+    expect(resolveRunProfileLimits).toBe(metadataLimits);
+    expect(resolveRunProfileToolAllowlist).toBe(metadataAllowlist);
+  });
   it.each(ARMS)('%s gets its own pinned limits, not the policy\'s', (profile, limits) => {
     const resolved = resolveRunProfileLimits({ profile }, AI_AGENT_LIMIT_DEFAULTS);
     expect(resolved).toEqual(limits(AI_AGENT_LIMIT_DEFAULTS));

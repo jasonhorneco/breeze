@@ -138,6 +138,7 @@ const EXPECTED_WORKER_NAMES = [
   'fixOutcomeWorker',
   // AI model registry W01 (#7599).
   'aiModelDiscoveryWorker',
+  'aiModelVerificationWorker',
   // Workload image currency W05 (#8194).
   'imageCurrencyWorker',
 ];
@@ -149,6 +150,15 @@ describe('workerRegistry: losslessness', () => {
 
   it('has exactly the expected number of entries', () => {
     expect(WORKER_REGISTRY.length).toBe(EXPECTED_WORKER_NAMES.length);
+  });
+
+  it('keeps listing global and SDK verification on the API-owning roles', () => {
+    const names = (role: 'all' | 'api' | 'worker') => selectWorkers(role).map((entry) => entry.name);
+    expect(names('worker')).toContain('aiModelDiscoveryWorker');
+    expect(names('worker')).not.toContain('aiModelVerificationWorker');
+    expect(names('api')).toContain('aiModelVerificationWorker');
+    expect(names('api')).not.toContain('aiModelDiscoveryWorker');
+    expect(names('all')).toEqual(expect.arrayContaining(['aiModelDiscoveryWorker', 'aiModelVerificationWorker']));
   });
 
   it('runs the SDK transcript sweeper on api and all roles only (#9050: transcripts live on API disks, not workers)', () => {

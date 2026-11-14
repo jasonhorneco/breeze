@@ -4,23 +4,38 @@ import { planCandidate } from './planCandidate';
 import type { Offering } from './offerings';
 import type { PartnerAiConnection } from './connections';
 
-const conn = {
+const fixtureDate = new Date('2026-01-01T00:00:00Z');
+const conn: PartnerAiConnection = {
   id: 'fixture-connection', partnerId: 'fixture-partner', kind: 'chatgpt_plan',
   status: 'active', configVersion: 2, connectedBy: 'fixture-owner',
-  providerConfig: { orgId: 'fixture-org' },
-} as PartnerAiConnection;
+  name: 'Fixture plan', providerConfig: { orgId: 'fixture-org' },
+  inferenceGeo: null, keyLast4: null, catalogEntryId: null, baseUrl: null,
+  lastError: null, verifiedAt: fixtureDate, lastDiscoveredAt: null, discoveryError: null,
+  createdAt: fixtureDate, updatedAt: fixtureDate,
+};
+
+function offering(over: Partial<Offering> = {}): Offering {
+  return {
+    id: 'fixture-offering', partnerId: conn.partnerId, connectionId: conn.id,
+    platformModelId: null, source: 'manual', enabled: true,
+    lifecycle: 'available', modelId: 'gpt-6.1-sol', displayName: 'GPT-6.1 Sol',
+    capabilities: { chatgptPlan: { efforts: ['low', 'high'], defaultEffort: 'low' } },
+    defaultOptions: { effort: 'high' }, allowedOptions: null,
+    toolProfile: 'auto', toolAllowlist: null, requiredPermission: null,
+    refusalFallbackOfferingId: null, lastSeenAt: null, missedSyncCount: 0,
+    priceInputCentsPerM: null, priceOutputCentsPerM: null,
+    priceCacheReadCentsPerM: null, priceCacheWriteCentsPerM: null,
+    contextWindowOverride: null, contextWindowDiscovered: null, contextWindowObserved: null,
+    contextWindowObservedAt: null, contextWindowObservedConfigVersion: null,
+    createdAt: fixtureDate, updatedAt: fixtureDate, ...over,
+  };
+}
 
 function candidate(over: Partial<Offering> = {}) {
   vi.stubEnv('BREEZE_CODEX_PLAN_WORKER_URL', 'https://worker.example.test');
   vi.stubEnv('BREEZE_CODEX_PLAN_WORKER_KEY_FILE', 'fixture-key-file');
   vi.stubEnv('BREEZE_CODEX_PLAN_CONNECTION_ID', conn.id);
-  return planCandidate({
-    id: 'fixture-offering', partnerId: conn.partnerId, enabled: true,
-    lifecycle: 'available', modelId: 'gpt-6.1-sol', displayName: 'GPT-6.1 Sol',
-    capabilities: { chatgptPlan: { efforts: ['low', 'high'], defaultEffort: 'low' } },
-    defaultOptions: { effort: 'high' }, toolProfile: 'auto', toolAllowlist: null,
-    ...over,
-  } as Offering, conn);
+  return planCandidate(offering(over), conn);
 }
 
 afterEach(() => vi.unstubAllEnvs());
@@ -59,9 +74,9 @@ describe('subscription candidate tool and window settings', () => {
   it('does not turn a missing worker binding into a paid fallback', () => {
     candidate();
     vi.stubEnv('BREEZE_CODEX_PLAN_CONNECTION_ID', 'different-connection');
-    const c = planCandidate({
+    const c = planCandidate(offering({
       modelId: 'gpt-6-luna', capabilities: { chatgptPlan: { efforts: [], defaultEffort: null } },
-    } as Offering, conn);
+    }), conn);
     expect(c.connection).toBeNull();
     expect(c.facts.connection?.keyUsable).toBe(false);
     expect(c.funding).toBe('chatgpt_plan');

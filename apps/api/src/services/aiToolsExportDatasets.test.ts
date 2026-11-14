@@ -52,7 +52,7 @@ vi.mock('./reportGenerationService', () => ({
 vi.mock('./aiToolsFleet', () => ({ aiLiveReportAuthority: async () => ({ scope: { kind: 'live_v1' } }) }));
 
 const readCustomFieldDefinitions = vi.fn(async () => [] as Array<Record<string, unknown>>);
-vi.mock('./aiToolsDevice', () => ({
+vi.mock('./customFieldDefinitionQueries', () => ({
   readCustomFieldDefinitions: () => readCustomFieldDefinitions(),
   customFieldDefinitionConditions: () => [],
 }));

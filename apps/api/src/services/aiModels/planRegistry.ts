@@ -8,9 +8,7 @@ import { inPartnerEnvLock } from './envOpenAiBootstrapStore';
 import { ensurePartnerCutover } from './registryCutover';
 import type { PartnerAiConnection } from './connections';
 import { planWorker } from './planCandidate';
-import { discoveryGrantRecord } from './gateway/grants';
-import { forwardUpstream } from './gateway/forward';
-import { joinByoUrl } from './gateway/byoEndpointPolicy';
+import { discoverChatGptPlanCatalog } from './gateway/planDiscovery';
 
 const catalogSchema = z.object({
   observed_at: z.iso.datetime({ offset: true }),
@@ -34,15 +32,7 @@ export async function refreshChatGptPlanCatalog(conn: PartnerAiConnection): Prom
   if (conn.kind !== 'chatgpt_plan' || conn.status !== 'active') throw new Error('ChatGPT connection unavailable');
   const route = planWorker(conn);
   if (!route) throw new Error('ChatGPT plan worker unavailable');
-  const response = await forwardUpstream(discoveryGrantRecord(route.config, route.credential), {
-    url: joinByoUrl(route.config.baseUrl, 'models'), method: 'GET',
-    headers: { accept: 'application/json' }, stream: false, maxBytes: 128_000,
-  }, AbortSignal.timeout(20_000));
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error('ChatGPT account catalog unavailable');
-  }
-  await saveChatGptPlanCatalog(await response.json());
+  await saveChatGptPlanCatalog(await discoverChatGptPlanCatalog(route));
 }
 
 async function saveChatGptPlanCatalog(raw: unknown): Promise<void> {

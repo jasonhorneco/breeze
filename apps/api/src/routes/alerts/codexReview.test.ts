@@ -4,7 +4,7 @@ import type { Context, Next } from 'hono';
 
 const mock = vi.hoisted(() => ({
   user: '3ecef742-f1b0-4f24-9a40-1f97d13f4af2',
-  principal: 'user_session', org: '74d52c8a-9434-4160-9bae-0d663ce169a5',
+  principal: 'user_session' as 'user_session' | 'api_key', org: '74d52c8a-9434-4160-9bae-0d663ce169a5',
   read: vi.fn(), publish: vi.fn(), readApproval: vi.fn(), upstream: vi.fn(),
 }));
 vi.mock('node:fs/promises', () => ({ readFile: async () => 'synthetic-service-token-0000000000000' }));
@@ -19,7 +19,12 @@ vi.mock('../../services/approvals/codexDraft', async (importOriginal) => ({
 }));
 vi.mock('../../middleware/auth', () => ({
   requireScope: () => async (c: Context, next: Next) => {
-    c.set('auth', { user: { id: mock.user }, principal: { kind: mock.principal }, canAccessOrg: (orgId: string) => orgId === mock.org });
+    c.set('auth', {
+      user: { id: mock.user, email: 'owner@example.test', name: 'Fixture owner', isPlatformAdmin: false },
+      principal: { kind: mock.principal }, token: null, partnerId: null,
+      orgId: mock.org, scope: 'organization', accessibleOrgIds: [mock.org],
+      orgCondition: () => undefined, canAccessOrg: (orgId: string) => orgId === mock.org,
+    });
     await next();
   },
   requirePermission: () => async (_c: Context, next: Next) => { await next(); },
