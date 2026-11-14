@@ -10,19 +10,20 @@ import { encodeSse } from './sse';
 import './planAdapter';
 
 const model = 'gpt-6-luna';
-const request = { model, max_tokens: 256, messages: [{ role: 'user' as const, content: 'Explain this stored alert.' }] };
+const prompt = 'Explain this stored alert.';
+const request = { model, max_tokens: 256, messages: [{ role: 'user' as const, content: prompt }] };
 let gateway: ModelGateway;
 let calls: number;
 let reply: () => Response;
 
 function completed() {
-  return new Response(encodeSse('response.completed', {
+  return new Response(new TextDecoder().decode(encodeSse('response.completed', {
     type: 'response.completed', response: {
       status: 'completed', model,
       output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Read the stored evidence.' }] }],
       usage: { input_tokens: 20, output_tokens: 5 },
     },
-  }), { headers: { 'content-type': 'text/event-stream' } });
+  })), { headers: { 'content-type': 'text/event-stream' } });
 }
 
 function client(maxRetries = 0, compactSchemas = false, contextWindow: number | null = null) {
@@ -78,7 +79,7 @@ describe('native ChatGPT plan gateway request semantics', () => {
       type: 'additional_tools', tools: [{ parameters: {
         type: 'object', properties: { name: { type: 'string' } }, required: ['name'],
       } }],
-    }, { role: 'user', content: request.messages[0].content }] });
+    }, { role: 'user', content: prompt }] });
     expect(JSON.stringify(sent)).not.toContain('maxLength');
   });
 

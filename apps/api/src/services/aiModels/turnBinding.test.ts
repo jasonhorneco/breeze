@@ -83,7 +83,7 @@ describe('liveQueryKey (spec §9.2: reuse only if nothing that shaped the subpro
       connection: { id: 'plan-connection', kind: 'chatgpt_plan', config: {
         source: 'gateway', kind: 'chatgpt_plan', partnerId: 'p1', connectionId: 'plan-connection',
         configVersion: 3, baseUrl: 'https://worker.example.test', effort: 'low',
-      } },
+      }, credential: { secret: 'fixture-worker-credential' } },
     });
     const low = turnBindingFrom(plan);
     const high = turnBindingFrom({ ...plan, options: { effort: 'high' } });
