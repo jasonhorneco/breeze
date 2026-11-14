@@ -208,7 +208,7 @@ import { isTriageProfile } from './triageProfile';
 import { isDesignProfile } from './designProfile';
 import { AI_AGENT_LIMIT_DEFAULTS } from '@breeze/shared';
 import { isPatchProfile } from './patchProfile';
-import { isResearchProfile } from './researchProfile';
+import { isResearchProfile, researchToolAllowlist } from './researchProfile';
 import { loadResearchContext, ResearchContextUnavailableError } from './researchContext';
 import { loadProvenFixesForRun, profileConsultsFixMemory } from '../fixMemory/runMemory';
 import type { ResearchToolRefs } from './researchSubmission';
