@@ -5,9 +5,9 @@
  * `sync-connection` (one BYOK/catalog connection; on connect, on key or
  * endpoint rotation, and on demand) and the daily `sync-all-connections`
  * fan-out. W06 (#7604) adds gateway kinds (openai_compatible) to the fan-out,
- * and `verify-offering`: the fidelity harness run through the model gateway
- * against ONE gateway-kind offering, on the admin's request only (never on
- * discovery, D5). Job payloads carry only ids, never key material.
+ * and a compatibility handoff for old `verify-offering` jobs. New verification
+ * requests use ai-model-verification on the API/socket-owning role; discovery
+ * never loads the SDK/tool execution graph. Payloads contain ids, never keys.
  */
 import { Queue, Worker, type Job } from 'bullmq';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -22,7 +22,8 @@ import {
   type ConnectionSyncReport,
   type SyncReport,
 } from '../services/aiModels/discovery';
-import { verifyConnectionOffering, type OfferingVerificationState } from '../services/aiModels/offeringVerification';
+import { closeAiModelVerificationQueue, delegateLegacyOfferingVerification, type AiModelVerificationJobData } from './aiModelVerificationQueue';
+export { VERIFY_OFFERING_JOB, enqueueOfferingVerification, verifyOfferingJobId } from './aiModelVerificationQueue';
 import { jobSchedule } from './scheduleRegistry';
 import { attachWorkerObservability, type WorkerFailureClassification } from './workerObservability';
 
@@ -30,7 +31,6 @@ export const AI_MODEL_DISCOVERY_QUEUE = 'ai-model-discovery';
 export const SYNC_PLATFORM_JOB = 'sync-platform';
 export const SYNC_CONNECTION_JOB = 'sync-connection';
 export const SYNC_ALL_CONNECTIONS_JOB = 'sync-all-connections';
-export const VERIFY_OFFERING_JOB = 'verify-offering';
 
 // BullMQ 5 rejects ':' in a custom jobId.
 const DAILY_REPEAT_JOB_ID = 'ai-model-discovery-sync-platform-daily';
@@ -45,8 +45,8 @@ export type AiModelDiscoveryJobData =
   | { type: 'sync-platform'; trigger: 'schedule' | 'manual' | 'boot' }
   | { type: 'sync-connection'; connectionId: string }
   | { type: 'sync-all-connections' }
-  /** `retryFailed`: the env bootstrap's run — a failed verdict is retried with a delay (see enqueueOfferingVerification). */
-  | { type: 'verify-offering'; offeringId: string; partnerId: string; retryFailed?: true };
+  /** Compatibility with requests already queued before verification gained its own worker. */
+  | AiModelVerificationJobData;
 
 /**
  * #9534: the failures below are expected outcomes the processor raises to ask
@@ -57,20 +57,6 @@ export type AiModelDiscoveryJobData =
  */
 function oneLineStack(err: Error): void {
   err.stack = `${err.name}: ${err.message}`;
-}
-
-/**
- * Thrown by an env-path verification whose verdict was 'failed', so BullMQ
- * retries it with a delay. The failed record is already stored; an attempt is
- * not an incident (logged as a warning), and only a run that spends all its
- * retries reaches Sentry, once, at warning level (#9534).
- */
-export class OfferingVerificationRetry extends Error {
-  constructor(offeringId: string) {
-    super(`Offering ${offeringId} failed verification; the queue will retry it`);
-    this.name = 'OfferingVerificationRetry';
-    oneLineStack(this);
-  }
 }
 
 /** The platform model listing failed (e.g. the provider rejected the platform key). Retried with backoff. */
@@ -85,15 +71,12 @@ export class PlatformModelSyncFailed extends Error {
 /**
  * The ONE place this worker's failures are logged and reported (via
  * attachWorkerObservability). A platform sync failure retries with backoff, so
- * it reaches Sentry once, when the retries are spent; a verification retry is
- * a stored verdict retried by design. Anything else keeps the default report.
+ * it reaches Sentry once, when the retries are spent. Verification retries
+ * belong to the separate verification worker. Other faults keep the default.
  */
 export function classifyAiModelDiscoveryFailure(_job: Job | undefined, err: Error): WorkerFailureClassification | null {
   if (err instanceof PlatformModelSyncFailed) {
     return { level: 'error', reason: 'ai_platform_model_sync_failed', reportOnlyWhenExhausted: true };
-  }
-  if (err instanceof OfferingVerificationRetry) {
-    return { level: 'warning', reason: 'ai_offering_verification_retry', reportOnlyWhenExhausted: true };
   }
   return null;
 }
@@ -132,41 +115,6 @@ export async function enqueueConnectionSync(connectionId: string): Promise<void>
   );
 }
 
-/** Colon-free, per offering: a second request collapses onto a waiting/active run. */
-export function verifyOfferingJobId(offeringId: string): string {
-  return `verify-offering-${offeringId}`;
-}
-
-/**
- * Queue a harness verification of one gateway-kind offering. The payload is
- * ids only (plus the retry flag). By default one attempt: an admin's click
- * stores a failed verification as a RESULT (tools off), and a retry would
- * spend the partner's tokens again. `retryFailed` (the MCP_LLM_* env bootstrap,
- * whose endpoint is often still loading at boot) retries a failed verdict
- * twice more with an exponential delay. Call it OUTSIDE any held DB context.
- */
-export async function enqueueOfferingVerification(
-  input: { offeringId: string; partnerId: string },
-  opts: { retryFailed?: boolean } = {},
-): Promise<void> {
-  const payload: AiModelDiscoveryJobData = {
-    type: 'verify-offering', offeringId: input.offeringId, partnerId: input.partnerId,
-    ...(opts.retryFailed ? { retryFailed: true as const } : {}),
-  };
-  await enqueueOrReplaceStale(
-    getAiModelDiscoveryQueue() as unknown as Queue,
-    VERIFY_OFFERING_JOB,
-    verifyOfferingJobId(input.offeringId),
-    payload,
-    {
-      ...(opts.retryFailed ? { attempts: 3, backoff: { type: 'exponential', delay: 60_000 } } : { attempts: 1 }),
-      removeOnComplete: { count: 100 },
-      removeOnFail: { count: 100 },
-    },
-    '[aiModelDiscovery]',
-  );
-}
-
 async function enqueueAllConnectionSyncs(): Promise<{ enqueued: number }> {
   const ids = await withSystemDbAccessContext(async () => (await db
     .select({ id: partnerAiConnections.id })
@@ -181,8 +129,8 @@ async function enqueueAllConnectionSyncs(): Promise<{ enqueued: number }> {
 }
 
 export async function processAiModelDiscoveryJob(
-  job: Pick<Job<AiModelDiscoveryJobData>, 'data'>,
-): Promise<SyncReport | ConnectionSyncReport | { enqueued: number } | { offeringId: string; state: OfferingVerificationState }> {
+  job: Pick<Job<AiModelDiscoveryJobData>, 'data'> & Partial<Pick<Job<AiModelDiscoveryJobData>, 'attemptsMade'>>,
+): Promise<SyncReport | ConnectionSyncReport | { enqueued: number } | Awaited<ReturnType<typeof delegateLegacyOfferingVerification>>> {
   switch (job.data.type) {
     case 'sync-platform': {
       const report = await syncPlatformModels();
@@ -203,22 +151,8 @@ export async function processAiModelDiscoveryJob(
     }
     case 'sync-all-connections':
       return enqueueAllConnectionSyncs();
-    case 'verify-offering': {
-      // Refusals (missing / foreign / non-gateway / disconnected) throw and fail
-      // the job; a failed run is stored on the offering and returned. The return
-      // value (kept in Redis) is the verdict only, never the record's detail.
-      const input = { offeringId: job.data.offeringId, partnerId: job.data.partnerId };
-      let result = await verifyConnectionOffering(input);
-      // A request for this offering collapses onto the in-flight job, which
-      // may have started before the connection's URL or key changed: its
-      // verdict is then discarded as superseded. Run once more against the
-      // current connection so that request is not silently dropped.
-      if (result.state === 'superseded' && result.connectionChanged) {
-        result = await verifyConnectionOffering(input);
-      }
-      if (result.state === 'failed' && job.data.retryFailed) throw new OfferingVerificationRetry(result.offeringId);
-      return { offeringId: result.offeringId, state: result.state };
-    }
+    case 'verify-offering':
+      return delegateLegacyOfferingVerification(job.data, job.attemptsMade ?? 0);
     default:
       throw new Error(`Unknown ai-model-discovery job type: ${String((job.data as { type?: unknown }).type)}`);
   }
@@ -283,6 +217,7 @@ export async function shutdownAiModelDiscoveryWorker(): Promise<void> {
     await queue.close();
     queue = null;
   }
+  await closeAiModelVerificationQueue();
 }
 
 export const __testOnly = { DAILY_REPEAT_JOB_ID, DAILY_CONNECTIONS_REPEAT_JOB_ID, MANUAL_JOB_ID, BOOT_JOB_ID, DAILY_CRON, DAILY_CONNECTIONS_CRON };

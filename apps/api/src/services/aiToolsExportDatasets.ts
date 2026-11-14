@@ -32,31 +32,13 @@ import {
 // siteScope.ts — importing it from the latter is a module-not-found at runtime.
 import { aiLiveReportAuthority } from './aiToolsFleet';
 import { resolveSiteAllowedDeviceIds } from './aiToolsSiteScope';
-import type { readCustomFieldDefinitions as ReadCustomFieldDefinitionsFn } from './aiToolsDevice';
+import { readCustomFieldDefinitions } from './customFieldDefinitionQueries';
 import type { verifyDeviceAccess as VerifyDeviceAccessFn } from './aiTools';
 import { runWithConcurrency, EXPORT_DEVICE_CONCURRENCY, type ExportPager } from './aiToolsExportWriter';
 
-/**
- * Lazy (call-time) imports of the two hub modules, NOT static ones.
- *
- * `aiToolsDevice.ts` already imports a value from `./aiTools`
- * (`verifyDeviceAccess`), and `aiTools.ts` eagerly calls `registerExportTools`
- * (this file's consumer) at ITS OWN module top level — so a static import here
- * closes a 4-hop cycle (aiToolsDevice → aiTools → aiToolsExport →
- * aiToolsExportDatasets → aiToolsDevice) on top of the pre-existing 2-hop one.
- * Under Vite's SSR module runner that manifested as a real, order-dependent
- * "Cannot access '__vite_ssr_import_N__' before initialization" failure that
- * only reproduced under the full test suite (whichever spec's import graph
- * happened to reach `aiToolsDevice.ts` first). Every real call site below is
- * already inside an async function — never module-eval time — so resolving
- * these via `import()` costs nothing (the module is cached after first load)
- * and removes this file from the synchronous part of the cycle entirely.
- */
+/** Verify-device access remains call-time to avoid loading the executable tool hub during registry construction. */
 async function getVerifyDeviceAccess(): Promise<typeof VerifyDeviceAccessFn> {
   return (await import('./aiTools')).verifyDeviceAccess;
-}
-async function getReadCustomFieldDefinitions(): Promise<typeof ReadCustomFieldDefinitionsFn> {
-  return (await import('./aiToolsDevice')).readCustomFieldDefinitions;
 }
 
 export const EXPORT_DATASETS = [
@@ -548,7 +530,6 @@ const customFieldsAdapter: DatasetAdapter = {
     // field definitions are org XOR partner: a partner-wide definition has
     // `org_id IS NULL` and an org filter drops every one of them — which for an
     // MSP that defines its fields once is most of the fields on the device.
-    const readCustomFieldDefinitions = await getReadCustomFieldDefinitions();
     const definitions = await readCustomFieldDefinitions(req.auth);
 
     // W04: an analysis run that names no devices gets its frozen set.
