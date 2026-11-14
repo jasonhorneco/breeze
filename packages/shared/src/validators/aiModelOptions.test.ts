@@ -17,7 +17,7 @@ const RATES = { inputCentsPerM: 200, outputCentsPerM: 1000, cacheReadCentsPerM: 
 
 describe('aiModelOptions literal sets', () => {
   it('pins the index contract literals', () => {
-    expect(EFFORT_LEVELS).toEqual(['low', 'medium', 'high', 'xhigh', 'max']);
+    expect(EFFORT_LEVELS).toEqual(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
     expect(THINKING_DISPLAYS).toEqual(['omitted', 'summarized', 'updates']);
     expect(MODEL_SPEEDS).toEqual(['standard', 'fast']);
     expect(PROMPT_PROFILES).toEqual(['claude-frontier', 'claude-standard', 'claude-small', 'generic']);
