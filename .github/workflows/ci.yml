@@ -28,7 +28,9 @@ on:
   # classifies the diff, code jobs are skipped on a docs-only PR, and
   # `ci-success` is the only reporter.
   pull_request:
-    branches: [main]
+    # Home fork integration/release PRs need the same checks as upstream PRs.
+    # A successful run validates source only; it never promotes a deployment.
+    branches: [main, home/staging, home/stable]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
