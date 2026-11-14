@@ -451,7 +451,8 @@ const namespaceDuplicateBaselines = {
     // +1: nav.variables — "Variables" is identical in French.
     // +1: nav.sectionAdministration (left-nav reorg, #4202) —
     // "Administration" is identical in French.
-    'common.json': 114, // +4 W04 #10135: nav.breezeAi "Breeze AI" + nav.aiForOffice "Breeze AI for Office" (protected product names), nav.agents "Agents" + nav.impact "Impact" (same words in French); // +3 W01 #10132: "Breeze AI" brand name (header, aiInitiator, onboarding step title); // +1 #9663: incidents.actors.brain "Breeze AI" is a protected proper noun; // +1 W06: lists.separator ", " is punctuation
+    // +1 saved-log search currentPage: "Page {{page}}" is also correct French.
+    'common.json': 115, // +4 W04 #10135: nav.breezeAi "Breeze AI" + nav.aiForOffice "Breeze AI for Office" (protected product names), nav.agents "Agents" + nav.impact "Impact" (same words in French); // +3 W01 #10132: "Breeze AI" brand name (header, aiInitiator, onboarding step title); // +1 #9663: incidents.actors.brain "Breeze AI" is a protected proper noun; // +1 W06: lists.separator ", " is punctuation
     // +6 W09 (#4777, RMM custom-field import): rmmCustomFieldImport.sources
     // product names (Datto RMM / NinjaOne / ConnectWise Automate / N-central)
     // plus dateFormat.iso "ISO (2026-12-31)" and mapping.fieldKeyPlaceholder
@@ -662,7 +663,8 @@ const namespaceDuplicateBaselines = {
     // +1: nav.variables — "Variables" is identical in French.
     // +1: nav.sectionAdministration (left-nav reorg, #4202) —
     // "Administration" is identical in French.
-    'common.json': 116, // +4 W04 #10135: nav.breezeAi "Breeze AI" + nav.aiForOffice "Breeze AI for Office" (protected product names), nav.agents "Agents" + nav.impact "Impact" (same words in French); // +3 W01 #10132: "Breeze AI" brand name (header, aiInitiator, onboarding step title); // +1 #9663: incidents.actors.brain "Breeze AI" is a protected proper noun; // +1 W06: lists.separator ", " is punctuation
+    // +1 saved-log search currentPage: "Page {{page}}" is also correct French.
+    'common.json': 117, // +4 W04 #10135: nav.breezeAi "Breeze AI" + nav.aiForOffice "Breeze AI for Office" (protected product names), nav.agents "Agents" + nav.impact "Impact" (same words in French); // +3 W01 #10132: "Breeze AI" brand name (header, aiInitiator, onboarding step title); // +1 #9663: incidents.actors.brain "Breeze AI" is a protected proper noun; // +1 W06: lists.separator ", " is punctuation
     // +6 W09 (#4777, RMM custom-field import): rmmCustomFieldImport.sources
     // product names (Datto RMM / NinjaOne / ConnectWise Automate / N-central)
     // plus dateFormat.iso "ISO (2026-12-31)" and mapping.fieldKeyPlaceholder

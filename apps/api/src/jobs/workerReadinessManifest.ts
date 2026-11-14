@@ -174,6 +174,7 @@ export const WORKER_READINESS_MANIFEST: readonly WorkerInitializerClassification
   consumers('m365SyncWorker'),
   consumers('pax8SyncWorker'),
   consumers('aiModelDiscoveryWorker'),
+  consumers('aiModelVerificationWorker'),
   consumers('imageCurrencyWorker'),
   consumers('tdSynnexSftpSyncWorker'),
   consumers('logForwardingWorker'),
