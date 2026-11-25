@@ -84,6 +84,8 @@ vi.mock('drizzle-orm', () => ({
   or: (...c: unknown[]) => ({ op: 'or', conditions: c.filter(Boolean) }),
   eq: (column: unknown, value: unknown) => ({ op: 'eq', column, value }),
   ne: (column: unknown, value: unknown) => ({ op: 'ne', column, value }),
+  gt: (column: unknown, value: unknown) => ({ op: 'gt', column, value }),
+  lt: (column: unknown, value: unknown) => ({ op: 'lt', column, value }),
   gte: (column: unknown, value: unknown) => ({ op: 'gte', column, value }),
   desc: (column: unknown) => ({ op: 'desc', column }),
   isNull: (column: unknown) => ({ op: 'isNull', column }),
@@ -504,19 +506,16 @@ describe('getProviderCoverageForDevices', () => {
 });
 
 describe('getProviderAttentionItems', () => {
-  it.each([0, 80])('returns a failed backup with %i healthy rows before it', async (offset) => {
-    const rows = Array.from({ length: 80 }, (_, i) => providerRow({
+  it('keeps looking for critical items after a full noncritical page', async () => {
+    const paused = Array.from({ length: 80 }, (_, i) => providerRow({
       id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      status: 'paused',
     }));
-    rows.splice(offset, 0, providerRow({ status: 'failed', errorsCount: 1 }));
-    selectMock.mockImplementationOnce(() => {
-      const chain = chainMock();
-      chain.limit.mockImplementation((limit: number) => Promise.resolve(rows.slice(0, limit)));
-      return chain;
-    });
+    queue(paused, [providerRow({ status: 'failed', errorsCount: 1 })]);
 
     const items = await getProviderAttentionItems(ORG_A, { allowedDeviceIds: null, limit: 20, now: NOW });
     expect(items.map((item) => item.id)).toEqual([`provider:${PROVIDER_ROW}`]);
+    expect(flatConditions(whereArg(1))).toContainEqual({ op: 'gt', column: 'bpd.id', value: paused[79]!.id });
   });
 
   it('names the vendor device and its customer, and falls back to the org name when the customer row is invisible', async () => {

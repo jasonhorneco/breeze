@@ -24,9 +24,10 @@
  * proxy. Nothing here opens a system context.
  */
 
-import { and, eq, ilike, inArray, isNotNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gt, ilike, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
 
 import {
+  BACKUP_CRITICAL_AFTER_HOURS,
   deriveBackupHealth,
   saasWorkloadLabel,
   type BackupHealth,
@@ -679,7 +680,17 @@ export async function getProviderAttentionItems(
     );
   }
 
-  const rows = await db
+  const now = opts.now ?? new Date();
+  // Skip recent successful rows in SQL; the shared classifier below still decides
+  // every returned item. JS Dates truncate PostgreSQL sub-millisecond precision.
+  const oldestRecentSuccess = new Date(now.getTime() - BACKUP_CRITICAL_AFTER_HOURS * 3_600_000 + 1);
+  conditions.push(or(
+    ne(backupProviderDevices.status, 'completed'),
+    isNull(backupProviderDevices.lastSuccessAt),
+    lt(backupProviderDevices.lastSuccessAt, oldestRecentSuccess),
+  ));
+  const pageSize = Math.min(BACKUP_HEALTH_SCAN_BATCH, opts.limit * 4);
+  const readPage = (afterId?: string) => db
     .select({
       id: backupProviderDevices.id,
       name: backupProviderDevices.vendorDeviceName,
@@ -699,37 +710,43 @@ export async function getProviderAttentionItems(
     .innerJoin(organizations, eq(organizations.id, backupProviderDevices.orgId))
     .leftJoin(backupProviderCustomers, eq(backupProviderCustomers.id, backupProviderDevices.customerId))
     .leftJoin(backupProviderConnections, eq(backupProviderConnections.id, backupProviderDevices.connectionId))
-    .where(and(...conditions))
-    .limit(opts.limit * 4);
+    .where(and(...conditions, afterId ? gt(backupProviderDevices.id, afterId) : undefined))
+    .orderBy(backupProviderDevices.id)
+    .limit(pageSize);
 
-  const now = opts.now ?? new Date();
   const items: Array<{ id: string; title: string; description: string; severity: 'critical' }> = [];
-  for (const row of rows) {
-    const stale = isConnectionStale(
-      {
-        isActive: row.connectionIsActive,
-        lastSyncAt: row.connectionLastSyncAt,
-        syncIntervalMinutes: row.connectionSyncIntervalMinutes,
-      },
-      now,
-    );
-    const health = stale
-      ? 'unknown'
-      : deriveBackupHealth({ status: row.status, lastSuccessAt: row.lastSuccessAt, errorsCount: row.errorsCount, now }).health;
-    if (health !== 'critical') continue;
-    const saas = row.accountType === 'm365' || row.accountType === 'gws';
-    const customer = row.customerName ?? row.orgName;
-    const workload = saasWorkloadLabel(row.dataSources?.[0] ?? row.accountType);
-    items.push({
-      id: `provider:${row.id}`,
-      title: saas ? `${customer} — ${workload} backup needs attention` : `${row.name}: external backup needs attention`,
-      // D-11: the customer name is partner-axis, so it is null for an org
-      // token. The mapped org's name is the faithful stand-in — it IS the
-      // customer, spelled the way Breeze spells it.
-      description: saas ? `${customer} — ${workload} backup — ${row.status}` : `${row.name} (${customer}) — ${row.status}`,
-      severity: 'critical',
-    });
-    if (items.length >= opts.limit) break;
+  let afterId: string | undefined;
+  while (items.length < opts.limit) {
+    const rows = await readPage(afterId);
+    for (const row of rows) {
+      const stale = isConnectionStale(
+        {
+          isActive: row.connectionIsActive,
+          lastSyncAt: row.connectionLastSyncAt,
+          syncIntervalMinutes: row.connectionSyncIntervalMinutes,
+        },
+        now,
+      );
+      const health = stale
+        ? 'unknown'
+        : deriveBackupHealth({ status: row.status, lastSuccessAt: row.lastSuccessAt, errorsCount: row.errorsCount, now }).health;
+      if (health !== 'critical') continue;
+      const saas = row.accountType === 'm365' || row.accountType === 'gws';
+      const customer = row.customerName ?? row.orgName;
+      const workload = saasWorkloadLabel(row.dataSources?.[0] ?? row.accountType);
+      items.push({
+        id: `provider:${row.id}`,
+        title: saas ? `${customer} — ${workload} backup needs attention` : `${row.name}: external backup needs attention`,
+        // D-11: the customer name is partner-axis, so it is null for an org
+        // token. The mapped org's name is the faithful stand-in — it IS the
+        // customer, spelled the way Breeze spells it.
+        description: saas ? `${customer} — ${workload} backup — ${row.status}` : `${row.name} (${customer}) — ${row.status}`,
+        severity: 'critical',
+      });
+      if (items.length >= opts.limit) return items;
+    }
+    if (rows.length < pageSize) break;
+    afterId = rows[rows.length - 1]!.id;
   }
   return items;
 }
