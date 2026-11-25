@@ -85,14 +85,13 @@ function zoneOffsetMs(instant: Date, tz: string): number {
 /**
  * Converts a wall-clock Date (the `maintenanceWallClock` space: UTC fields
  * carry the digits) in `tz` back to a real instant. Two offset iterations
- * settle every regular time; for a DST gap the candidates disagree and the
- * LATER instant wins (shift forward); for an overlap the first candidate
- * already round-trips and wins (first occurrence).
+ * settle regular times. Start with the preceding day's offset so a repeated
+ * wall time resolves to its first occurrence. For a gap, find the transition.
  */
 export function wallClockToInstant(wall: Date, timezone: string | null | undefined): Date {
   const tz = timezone || 'UTC';
   const digitsAsUtc = wall.getTime();
-  const first = new Date(digitsAsUtc - zoneOffsetMs(new Date(digitsAsUtc), tz));
+  const first = new Date(digitsAsUtc - zoneOffsetMs(new Date(digitsAsUtc - DAY_MS), tz));
   if (zoneOffsetMs(first, tz) === digitsAsUtc - first.getTime()) return first;
   const second = new Date(digitsAsUtc - zoneOffsetMs(first, tz));
   if (zoneOffsetMs(second, tz) === digitsAsUtc - second.getTime()) return second;

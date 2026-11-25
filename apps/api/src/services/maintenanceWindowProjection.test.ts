@@ -90,6 +90,14 @@ beforeEach(() => {
 });
 
 describe('projectNextConfigPolicyWindow (pure)', () => {
+  it.each([
+    ['Europe/Berlin', '02:30', '2026-10-24T22:00:00Z', '2026-10-25T00:30:00Z'],
+    ['Australia/Lord_Howe', '01:45', '2026-04-04T13:00:00Z', '2026-04-04T14:45:00Z'],
+  ])('opens at the first occurrence of a repeated local time in %s', (timezone, windowStart, from, first) => {
+    const window = projectNextConfigPolicyWindow(settings({ timezone, windowStart }), new Date(from));
+    expect(window?.startsAt).toEqual(new Date(first));
+  });
+
   it('projects the next daily occurrence, including the one later today', () => {
     const w = projectNextConfigPolicyWindow(settings(), new Date('2026-09-15T01:00:00Z'));
     expect(w).toMatchObject({
